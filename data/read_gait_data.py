@@ -28,8 +28,8 @@ def proc_gait_data(path: str) -> np.ndarray:
     data = np.zeros(num_samples, max_frame, num_nodes, num_features) # N, T, V, C
 
     for idx, r in enumerate(raw_data):
-        nf = min(r.shape[0], max_frame)
-        data = data[:nf]
+        sample_num_frames = min(r.shape[0], max_frame)
+        data = data[:sample_num_frames]
         sample_feature = np.stack(np.split(data, num_nodes), dim=0) # V * (C - 1) -> V, C - 1
 
         sample_gait = gait_seq[idx]
@@ -39,30 +39,33 @@ def proc_gait_data(path: str) -> np.ndarray:
         step_len = np.array(sample_gait["SLen"].values())[2:]
 
         total_time = step_time.sum()
-        num_frames_per_sec = nf / total_time
+        num_frames_per_sec = sample_num_frames / total_time
         start_frame_idx = 0
-        start_len = end_len = 0
+        end_len = start_len = 0
         
         # fill Z values
         sample_z = np.zeros(num_nodes)
         for length, time in zip(step_len, step_time):
             step_frames = int(time * num_frames_per_sec) + 1
             
-            if step_frames + start_frame_idx > nf:
-                step_frames = nf - start_frame_idx
+            if step_frames + start_frame_idx > sample_num_frames:
+                step_frames = sample_num_frames - start_frame_idx
             
             end_len = start_len + length
             zs = np.linspace(start_len, end_len, step_frames)
             sample_z[start_frame_idx, start_frame_idx + step_frames] = zs
 
+            start_frame_idx += step_frames
+            start_len = end_len
+
         sample_feature = np.concatenate([sample_feature, sample_z[:, None]], dim=1)
-        data[idx, :nf] = sample_feature
+        data[idx, :sample_num_frames] = sample_feature
     
     # swap Y and Z features 
     data[..., [1, 2]] = data[..., [2, 1]]
     data = preprocessing(data)
 
     return data
-    
+
 if __name__ == "__main__":
     proc_gait_data("../Data/output_1.pkl")
