@@ -73,10 +73,5 @@ if __name__ == "__main__":
         import pickle
         data, labels, names = pickle.load(f)
     
-    maxes, mines = data.max((0, 1, 2)), data.min((0, 1, 2))
-    max_v = np.where(maxes > np.abs(mines), maxes, np.abs(mines))
-    print(maxes, mines, max_v)
-    input("stop...")
-    data = data / max_v
     # visualizer = initializer("./basic_vis/")
     # visualizer(data, labels, names)
