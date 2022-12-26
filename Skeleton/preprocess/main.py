@@ -3,8 +3,8 @@ import numpy as np
 from .pad_empty_frames import pad_empty_frames
 from .fill_na_locs import fill_unknown_locs
 
-def preprocessing(data: np.ndarray, center_joint_idx: int = 8, 
-        remove_hard_cases:bool = False) -> np.ndarray:
+def preprocessing(data: np.ndarray, labels: np.ndarray, names: np.ndarray, 
+        center_joint_idx: int = 8) -> np.ndarray:
     """ Preprocesses the skeleton data 
 
     Args:
@@ -17,10 +17,11 @@ def preprocessing(data: np.ndarray, center_joint_idx: int = 8,
     """
     data, hard_cases_id = fill_unknown_locs(data)
 
-    if remove_hard_cases:
-        mask = np.ones(data.shape[0], np.bool)
-        mask[hard_cases_id] = False
-        data = data[mask]
+    mask = np.ones(data.shape[0], np.bool)
+    mask[hard_cases_id] = False
+    data = data[mask]
+    labels = labels[mask]
+    names = names[mask]
     
     data = pad_empty_frames(data)
     center = data[:, [0], [center_joint_idx], :][:, None, ...]
@@ -31,4 +32,4 @@ def preprocessing(data: np.ndarray, center_joint_idx: int = 8,
     max_v = np.where(maxes > np.abs(mines), maxes, np.abs(mines))
     data = data / max_v
     
-    return data
+    return data, labels, names

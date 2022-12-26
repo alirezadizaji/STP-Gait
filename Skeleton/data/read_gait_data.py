@@ -23,7 +23,9 @@ def proc_gait_data(load_dir: str, save_dir: str) -> None:
     
     raw_data = df['keypoints'].values
     gait_seq = df['gait_sequence'].values
-
+    labels = df['class'].values
+    names = df['video_name'].values
+    
     num_frames = [r.shape[0] for r in raw_data]
     mean, std = np.mean(num_frames), np.std(num_frames)
     max_frame = int(np.ceil(mean + std))
@@ -65,10 +67,8 @@ def proc_gait_data(load_dir: str, save_dir: str) -> None:
 
     # swap Y and Z features 
     data[..., [1, 2]] = data[..., [2, 1]]
-    data = preprocessing(data, remove_hard_cases=True)
-
-    labels = df['class'].values
-    names = df['video_name'].values
     
+    data, labels, names = preprocessing(data, labels, names)
+
     with open(os.path.join(save_dir, "processed.pkl"), 'wb') as f:
         pickle.dump((data, labels, names), f)
