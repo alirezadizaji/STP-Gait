@@ -68,6 +68,9 @@ def proc_gait_data(load_dir: str, save_dir: str) -> None:
     # swap Y and Z features 
     data[..., [1, 2]] = data[..., [2, 1]]
     
+    # At first, the patient should locate at Y=0
+    data[..., 1] = 1 - data[..., 1]
+    
     data, labels, names = preprocessing(data, labels, names)
 
     with open(os.path.join(save_dir, "processed.pkl"), 'wb') as f:
