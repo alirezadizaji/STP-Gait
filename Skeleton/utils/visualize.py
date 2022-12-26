@@ -27,12 +27,16 @@ def initializer(work_dir: str) -> Func:
             ax.set_xlim([-1,1])
             ax.set_ylim([-1,1])
             ax.set_zlim([-1,1])
+            ax.set_xlabel('$X$')
+            ax.set_ylabel('$Y$')
+            ax.set_zlabel('$Z$')
 
-            for i, j in Skeleton.edges:
+
+            for i, j in Skeleton._one_direction_edges:
                 joint_locs = skeleton[[i,j]]
                 
                 # plot them
-                ax.plot(joint_locs[0],joint_locs[1],joint_locs[2], color='blue')
+                ax.plot(joint_locs[:, 0],joint_locs[:, 1],joint_locs[:, 2], color='blue')
             
             plt.title(f'Skeleton {index} Frame #{frame_index} of {T}\n (label: {label})')
             skeleton_index[0] += 1
@@ -46,14 +50,16 @@ def initializer(work_dir: str) -> Func:
             ax.set_xlim([-1,1])
             ax.set_ylim([-1,1])
             ax.set_zlim([-1,1])
+            ax.set_xlabel('$X$')
+            ax.set_ylabel('$Y$')
+            ax.set_zlabel('$Z$')
 
             # get data
 
             print(f'Sample name: {name}\nLabel: {label}\n')   # (C,T,V,M)
 
             skeleton_index = [0]
-            skeleton_frames = skeleton.transpose(1,0,2)
-            ani = FuncAnimation(fig, animate, skeleton_frames)
+            ani = FuncAnimation(fig, animate, skeleton)
             
             # # saving to m4 using ffmpeg writer
             # writervideo = animation.FFMpegWriter(fps=60)
@@ -68,7 +74,8 @@ def initializer(work_dir: str) -> Func:
 
 
 if __name__ == "__main__":
-    proc_gait_data("../../Data/output_1.pkl", "../../Data")
+    # proc_gait_data("../../Data/output_1.pkl", "../../Data")
+    
     with open("../../Data/processed.pkl", "rb") as f:
         import pickle
         data, labels, names = pickle.load(f)

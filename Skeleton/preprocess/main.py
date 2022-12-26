@@ -1,12 +1,10 @@
-from typing import List, Tuple
-
 import numpy as np
 
 from .pad_empty_frames import pad_empty_frames
 from .fill_na_locs import fill_unknown_locs
 
 def preprocessing(data: np.ndarray, center_joint_idx: int = 8, 
-        remove_hard_cases:bool = False) -> Tuple[np.ndarray, List[int]]:
+        remove_hard_cases:bool = False) -> np.ndarray:
     """ Preprocesses the skeleton data 
 
     Args:
@@ -33,4 +31,4 @@ def preprocessing(data: np.ndarray, center_joint_idx: int = 8,
     max_v = np.where(maxes > np.abs(mines), maxes, np.abs(mines))
     data = data / max_v
     
-    return data, hard_cases_id
+    return data
