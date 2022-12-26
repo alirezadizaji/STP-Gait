@@ -18,7 +18,6 @@ def fill_unknown_locs(data: np.ndarray) -> Tuple[np.ndarray, List[int]]:
 
     N, T, V, C = data.shape
     data = data.reshape(N, T, -1)   # N, T, V, C -> N, T, V*C
-    input("start b****")
     
     hard_cases_id: List[int] = list()
     for idx, skeleton in enumerate(data):

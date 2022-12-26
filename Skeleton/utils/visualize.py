@@ -73,5 +73,5 @@ if __name__ == "__main__":
         import pickle
         data, labels, names = pickle.load(f)
     
-    # visualizer = initializer("./basic_vis/")
-    # visualizer(data, labels, names)
+    visualizer = initializer("./basic_vis/")
+    visualizer(data, labels, names)

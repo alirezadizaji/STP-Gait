@@ -32,5 +32,5 @@ def preprocessing(data: np.ndarray, center_joint_idx: int = 8,
     maxes, mines = data.max((0, 1, 2)), data.min((0, 1, 2))
     max_v = np.where(maxes > np.abs(mines), maxes, np.abs(mines))
     data = data / max_v
-
+    
     return data, hard_cases_id

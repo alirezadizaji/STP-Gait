@@ -6,7 +6,9 @@ import numpy as np
 import pandas as pd
 
 from ..preprocess import preprocessing
+from ..utils import timer
 
+@timer
 def proc_gait_data(load_dir: str, save_dir: str) -> None:
     """ Processes Raw gait dataset (CSV file) provided by OpenPose
 
@@ -63,7 +65,7 @@ def proc_gait_data(load_dir: str, save_dir: str) -> None:
 
     # swap Y and Z features 
     data[..., [1, 2]] = data[..., [2, 1]]
-    data = preprocessing(data)
+    data = preprocessing(data, remove_hard_cases=True)
 
     labels = df['class'].values
     names = df['video_name'].values
