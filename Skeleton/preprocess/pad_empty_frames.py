@@ -35,9 +35,15 @@ def pad_empty_frames(data: np.ndarray) -> np.ndarray:
         seq_frame_indices = non_empty_indices[1][start:end]
         non_empty_frames_repeated.append(np.tile(seq_frame_indices, repeat_num).tolist())
     non_empty_frames_repeated = np.concatenate(non_empty_frames_repeated).ravel()
-
-    # Put non-empty frames at first; As it fills "repeated", the empty frames are also filled simultaneously.
-    new_data[seq_num_repeated, frame_num_repeated] = data[seq_num_repeated, non_empty_frames_repeated]
-    new_data = new_data[:, :T, ...]
     
+    assert seq_num_repeated.size == frame_num_repeated.size == non_empty_frames_repeated.size
+
+    # To prevent CPU leakage, chunk data indexing into ten subset operations
+    tmp_indices = np.arange(seq_num_repeated.size)
+    for ti in np.array_split(tmp_indices, 10):
+        # Put non-empty frames at first; As it fills "repeated", the empty frames are also filled simultaneously.
+        new_data[seq_num_repeated[ti], frame_num_repeated[ti]] = \
+            data[seq_num_repeated[ti], non_empty_frames_repeated[ti]]
+
+    new_data = new_data[:, :T, ...]
     return new_data

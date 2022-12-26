@@ -1,21 +1,22 @@
+import os
+from typing import Tuple
+import pickle
+
 import numpy as np
 import pandas as pd
 
 from ..preprocess import preprocessing
 
-def proc_gait_data(path: str) -> np.ndarray:
+def proc_gait_data(load_dir: str, save_dir: str) -> None:
     """ Processes Raw gait dataset (CSV file) provided by OpenPose
 
     Args:
-        path (str): path to CSV raw data
-
-    Returns:
-        np.ndarray: processed CSV file in numpy array format with shape N (number of samples), C (number of features), T (number of frames), V (number of nodes)
+        load_dir (str): CSV raw data directory to be loaded
     """
     num_features = 3
     num_nodes = 25
 
-    with open(path, "rb") as f:
+    with open(load_dir, "rb") as f:
         df = pd.read_pickle(f)
     
     raw_data = df['keypoints'].values
@@ -64,7 +65,8 @@ def proc_gait_data(path: str) -> np.ndarray:
     data[..., [1, 2]] = data[..., [2, 1]]
     data = preprocessing(data)
 
-    return data
-
-if __name__ == "__main__":
-    proc_gait_data("../Data/output_1.pkl")
+    labels = df['class'].values
+    names = df['video_name'].values
+    
+    with open(os.path.join(save_dir, "processed.pkl"), 'wb') as f:
+        pickle.dump((data, labels, names), f)
