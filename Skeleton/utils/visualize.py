@@ -8,6 +8,7 @@ import matplotlib.animation as animation
 import numpy as np
 
 from ..context import Skeleton
+from ..data import proc_gait_data
 
 class Func(Protocol):
     def __call__(self, data: np.ndarray, labels: np.ndarray, names: np.ndarray) -> None:
@@ -81,11 +82,5 @@ if __name__ == "__main__":
         import pickle
         data, labels, names = pickle.load(f)
     
-    last_frame_y = data[:, -1, 0, 1] # N
-    mask = last_frame_y <= 0.1
-    data = data[mask]
-    labels = labels[mask]
-    names = names[mask]
-
     visualizer = initializer("./basic_vis/")
     visualizer(data, labels, names)
