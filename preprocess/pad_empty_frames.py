@@ -1,8 +1,8 @@
 import numpy as np
 
 
-def _swap_non_empty_frames(data: np.ndarray) -> np.ndarray:
-    """ Swaps non-empty frames at the first of sequence
+def pad_empty_frames(data: np.ndarray) -> np.ndarray:
+    """ It swaps non-empty frames to the beginning of the sequence at first place, and then fills empty frames
 
     Args:
         data (np.ndarray): shape: (N, T, V, C)
@@ -10,51 +10,34 @@ def _swap_non_empty_frames(data: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: _description_
     """
-
-    new_data = np.zeros_like(data)
+    
+    T = data.shape[1]
 
     frames_agg = data.sum(axis=(2, 3)) 
     non_empty_indices = np.nonzero(frames_agg != 0)
 
     seq_num = non_empty_indices[0]
     _, indices = np.unique(seq_num, return_index=True)
-    indices = np.concatenate([indices, seq_num.size])
-    sizes = np.diff(indices)
-    frame_num = np.concatenate([np.arange(s) for s in sizes]).ravel()
+    indices = np.concatenate([indices, [seq_num.size]])
+    non_empty_sizes = np.diff(indices)
 
-    # Put non-empty frames at first
-    new_data[seq_num, frame_num] = data[seq_num, non_empty_indices[1]]
+    empty_sizes: np.ndarray = T - non_empty_sizes
+    repeat_num = int(np.ceil(empty_sizes / non_empty_sizes).max())
+
+    # All sequences are repeated with same count, though at last only the first T frames are extracted.
+    new_data = np.zeros((data.shape[0], T * repeat_num, *data.shape[2:]))
+
+    frame_num_repeated = np.concatenate([np.arange(s * repeat_num) for s in non_empty_sizes]).ravel()
+    seq_num_repeated = np.repeat(seq_num, repeat_num)
     
-    return new_data, sizes
+    non_empty_frames_repeated = []
+    for start, end in zip(indices[:-1], indices[1:]):
+        seq_frame_indices = non_empty_indices[1][start:end]
+        non_empty_frames_repeated.append(np.tile(seq_frame_indices, repeat_num).tolist())
+    non_empty_frames_repeated = np.concatenate(non_empty_frames_repeated).ravel()
 
-
-def pad_empty_frames(data: np.ndarray) -> np.ndarray:
-    """ It repeats the sequence to fill null frames for each skeleton
-
-    Args:
-        data (np.ndarray): Skeleton frames; shape: N, C, T, V
-    """
+    # Put non-empty frames at first; As it fills "repeated", the empty frames are also filled simultaneously.
+    new_data[seq_num_repeated, frame_num_repeated] = data[seq_num_repeated, non_empty_frames_repeated]
+    new_data = new_data[:, :T, ...]
     
-    T = data.shape[1]
-    data = np.transpose(data, [0, 2, 3, 1])  # N, T, V, C
-
-    # First, put non-empty frames at first. Also return the non-empty frames count per sequence
-    new_data, sizes = _swap_non_empty_frames(data)
-    empty_sizes: np.ndarray = T - sizes
-
-    # Second, create a repeated frames for each sequence with which empty frames will be filled
-    repeat_num = np.ceil(empty_sizes / sizes).max()
-    repeat_data = np.tile(new_data, (1, repeat_num, 1, 1))
-    repeat_data, _ = _swap_non_empty_frames(repeat_data)
-
-    seq_num = np.arange(empty_sizes.size)
-    seq_num = np.repeat(seq_num, empty_sizes)
-    frame_num = np.concatenate([np.arange(s) for s in empty_sizes]).ravel()
-    frame_num2 = np.concatenate([np.arange(em) + s for em, s in zip(empty_sizes, sizes)]).ravel()
-
-    # Third, fill empty frames using repeated data
-    new_data[seq_num, frame_num2] = repeat_data[seq_num, frame_num]
-
-    data = np.transpose(new_data, [0, 3, 1, 2])  # N, T, V, C
-
-    return data
+    return new_data

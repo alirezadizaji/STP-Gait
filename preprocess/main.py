@@ -12,8 +12,6 @@ def preprocessing(data: np.ndarray, center_joint_idx: int = 8) -> np.ndarray:
     Returns:
         np.ndarray: _description_
     """
-
-
     data = pad_empty_frames(data)
 
     center = data[:, :, [center_joint_idx], :]
