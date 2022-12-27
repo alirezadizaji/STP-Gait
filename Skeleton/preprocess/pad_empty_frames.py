@@ -22,6 +22,11 @@ def pad_empty_frames(data: np.ndarray) -> np.ndarray:
     non_empty_sizes = np.diff(indices)
 
     empty_sizes: np.ndarray = T - non_empty_sizes
+    
+    # Return the data itself if there is no empty frames
+    if np.all(empty_sizes == 0):
+      return data
+
     repeat_num = int(np.ceil(empty_sizes / non_empty_sizes).max())
 
     # All sequences are repeated with same count, though at last only the first T frames are extracted.
