@@ -1,3 +1,4 @@
+from argparse import ArgumentParser
 import os
 from typing_extensions import Protocol
 
@@ -74,13 +75,24 @@ def initializer(work_dir: str) -> Func:
 
     return visualize_samples
 
+def get_parser():
+    parser = ArgumentParser(description='GAIT Skeleton Visualizer.')
+    parser.add_argument('-L', '--load-path', type=str, help='Path to load and process (if not exist) the raw data')
+    parser.add_argument('-S', '--save-dir', type=str, help='directory to save the processed file')
+    parser.add_argument('-D', '--save-vis-dir', type=str, help='directory to save 3D visualizations')
+    args = parser.parse_args()
+    return args
 
 if __name__ == "__main__":
-    proc_gait_data("../../Data/output_1.pkl", "../../Data")
+    args = get_parser()
+
+    save_path = os.path.join(args.save_dir, "processed.pkl")
+    if not os.path.exists(save_path):
+        proc_gait_data(args.load_path, args.save_dir)
     
-    with open("../../Data/processed.pkl", "rb") as f:
+    with open(save_path, "rb") as f:
         import pickle
         data, labels, names = pickle.load(f)
     
-    visualizer = initializer("./basic_vis/")
+    visualizer = initializer(args.save_vis_dir)
     visualizer(data, labels, names)
