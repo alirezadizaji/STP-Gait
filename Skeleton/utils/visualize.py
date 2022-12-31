@@ -21,22 +21,23 @@ def initializer(work_dir: str) -> Func:
 
     def visualize_samples(data: np.ndarray, labels: np.ndarray, names: np.ndarray) -> None:
         T = data.shape[1]
+        maxes, mines = data.max((0, 1, 2)), data.min((0, 1, 2))
 
         def _pre_setting_ax():
             ax.clear()
-            ax.view_init(elev=-178, azim=78)
+            ax.view_init(elev=5, azim=-87)
 
-            ax.set_xlim([-1,1])
+            ax.set_xlim([mines[0], maxes[0]])
             ax.set_xlabel('$X$')
-            ax.set_xticks([-1, 0, 1])
+            ax.set_xticks([mines[0], (mines[0] + maxes[0]) / 2, maxes[0]])
 
-            ax.set_ylim([0,1])
+            ax.set_ylim([mines[1], maxes[1]])
             ax.set_ylabel('$Y$')
-            ax.set_yticks([0, 0.5, 1])
+            ax.set_yticks([mines[1], (mines[1] + maxes[1]) / 2, maxes[1]])
 
-            ax.set_zlim([-1,1])
+            ax.set_zlim([mines[2], maxes[2]])
             ax.set_zlabel('$Z$')
-            ax.set_zticks([-1, 0, 1])
+            ax.set_zticks([mines[2], (mines[2] + maxes[2]) / 2, maxes[2]])
         
         def animate(skeleton):
             frame_index = skeleton_index[0]
@@ -54,19 +55,17 @@ def initializer(work_dir: str) -> Func:
             return ax
 
         for index, (skeleton, name, label) in enumerate(zip(data, names, labels)):
+            print(f'Sample name: {name}\nLabel: {label}\n')
             mpl.rcParams['legend.fontsize'] = 10
             fig = plt.figure()
             ax = fig.gca(projection='3d')
             _pre_setting_ax()
 
-
-            print(f'Sample name: {name}\nLabel: {label}\n')
-
             skeleton_index = [0]
             ani = FuncAnimation(fig, animate, skeleton)
             
             # saving to m4 using ffmpeg writer
-            writervideo = animation.FFMpegWriter(fps=60)
+            writervideo = animation.FFMpegWriter(fps=30)
             save_dir = os.path.join(work_dir, 'visualization', label)
             os.makedirs(save_dir, exist_ok=True)
             ani.save(os.path.join(save_dir, f'{name}.mp4'), writer=writervideo)
@@ -93,6 +92,6 @@ if __name__ == "__main__":
     with open(save_path, "rb") as f:
         import pickle
         data, labels, names = pickle.load(f)
-    
+
     visualizer = initializer(args.save_vis_dir)
     visualizer(data, labels, names)

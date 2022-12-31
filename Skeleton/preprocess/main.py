@@ -23,13 +23,23 @@ def preprocessing(data: np.ndarray, labels: np.ndarray, names: np.ndarray,
     labels = labels[mask]
     names = names[mask]
     
+    # Pad empty frames by replaying non-empty frames
     data = pad_empty_frames(data)
     center = data[:, [0], [center_joint_idx], :][:, None, ...]
     data = data - center
+
+    # Revert upside-down direction
+    data[..., 2] = -data[..., 2]
     
-    # Normalize to the range of [-1, 1]
-    maxes, mines = data.max((0, 1, 2)), data.min((0, 1, 2))
-    max_v = np.where(maxes > np.abs(mines), maxes, np.abs(mines))
-    data = data / max_v
-    
+    # Normalization
+    coef = 4
+    means, stds = data.mean((0, 1, 2)), data.std((0, 1, 2))
+    data = (data - means) / (stds + 1e-4)
+
+    ## Clip based on a limit per axis
+    data = np.clip(data, -coef, coef)
+
+    ## Shift all values to remove negative values
+    data = (data  + coef) / (2 * coef)
+
     return data, labels, names
