@@ -60,7 +60,7 @@ def initializer(work_dir: str) -> Func:
             _pre_setting_ax()
 
 
-            print(f'Sample name: {name}\nLabel: {label}\n')   # (C,T,V,M)
+            print(f'Sample name: {name}\nLabel: {label}\n')
 
             skeleton_index = [0]
             ani = FuncAnimation(fig, animate, skeleton)
