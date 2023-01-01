@@ -20,6 +20,9 @@ def initializer(work_dir: str) -> Func:
     os.makedirs(work_dir, exist_ok=True)
 
     def visualize_samples(data: np.ndarray, labels: np.ndarray, names: np.ndarray) -> None:
+        # Swap Y-Z axis for just visualization
+        data[..., [1, 2]] = data[..., [2, 1]]
+
         T = data.shape[1]
         maxes, mines = data.max((0, 1, 2)), data.min((0, 1, 2))
 

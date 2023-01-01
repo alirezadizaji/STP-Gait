@@ -29,7 +29,7 @@ def preprocessing(data: np.ndarray, labels: np.ndarray, names: np.ndarray,
     data = data - center
 
     # Revert upside-down direction
-    data[..., 2] = -data[..., 2]
+    data[..., 1] = -data[..., 1]
     
     # Normalization
     coef = 4
@@ -39,7 +39,7 @@ def preprocessing(data: np.ndarray, labels: np.ndarray, names: np.ndarray,
     ## Clip based on a limit per axis
     data = np.clip(data, -coef, coef)
 
-    ## Shift all values to remove negative values
+    ## Shift all values into [0,1] range
     data = (data  + coef) / (2 * coef)
 
     return data, labels, names

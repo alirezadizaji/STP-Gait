@@ -5,12 +5,12 @@ import pickle
 import numpy as np
 import pandas as pd
 
-from ..enum import WalkDirection
+from ..enums import WalkDirection
 from ..preprocess import preprocessing
 from ..utils import timer
 
 @timer
-def proc_gait_data(load_dir: str, save_dir: str, fill_Z_zero: bool = False) -> None:
+def proc_gait_data(load_dir: str, save_dir: str, fillZ_empty: bool = False) -> None:
     """ Processes Raw gait dataset (CSV file) provided by OpenPose
 
     Args:
@@ -41,7 +41,7 @@ def proc_gait_data(load_dir: str, save_dir: str, fill_Z_zero: bool = False) -> N
         sample_gait = gait_seq[idx]
 
         sample_z = np.zeros((sample_num_frames, num_nodes))
-        if not fill_Z_zero:
+        if not fillZ_empty:
             # Seems like the first two steps is when the patient enters to the process :), since it is always NaN
             step_time = np.array(list(sample_gait['STime'].values()))[2:]
             step_len = np.array(list(sample_gait["SLen"].values()))[2:]
@@ -71,9 +71,6 @@ def proc_gait_data(load_dir: str, save_dir: str, fill_Z_zero: bool = False) -> N
     # Revert walk direction when going away from the camera
     away_idxs = np.nonzero(walk_directions == WalkDirection.AWAY)
     data[away_idxs, ..., 2] = data[away_idxs, ..., 2].max((1, 2)) - data[away_idxs, ..., 2]
-    
-    # swap Y and Z features 
-    data[..., [1, 2]] = data[..., [2, 1]]
     
     data, labels, names = preprocessing(data, labels, names)
 
