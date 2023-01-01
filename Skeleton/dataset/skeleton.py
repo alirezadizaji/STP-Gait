@@ -1,31 +1,40 @@
 import os
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 import numpy as np
 import torch
 from torch.utils.data import Dataset
+from torch_geometric.data import Data, Batch
 
+from ..context.skeleton import Skeleton
 from ..data import proc_gait_data
 
 class SkeletonDataset(Dataset):
     def __init__(self, 
-            data: np.ndarray,
+            X: np.ndarray,
             names: np.ndarray,
-            labels: np.ndarray) -> None:
+            Y: np.ndarray) -> None:
 
         super().__init__()
 
-        self.data = torch.from_numpy(data)
-        self.names = names
-        self.labels = torch.from_numpy(labels)
+        X: torch.Tensor = torch.from_numpy(X)
+        Y: torch.Tensor = torch.from_numpy(Y)
 
-        assert self.data.size(0) == self.names.size == self.labels.size(0), f"Mismatch number of samples between data ({self.data.size()}), names ({names.size}) and labels ({self.labels.size(0)})."
+        assert X.size(0) == names.size == Y.size(0), f"Mismatch number of samples between data ({X.size(0)}), names ({names.size}) and labels ({Y.size(0)})."
+
+        edge_index = Skeleton.get_simple_interframe_edges(X.shape[1])
+        self.data: List[Data] = [Data(x=x, edge_index=edge_index, y=y, name=n) 
+            for x, n, y in zip(X, names, Y)]
+        
 
     def __len__(self):
-        return self.data.size(0)
+        return len(self.data)
     
-    def __getitem__(self, index) -> Tuple[torch.Tensor, torch.Tensor, np.ndarray]:
-        return self.data[index], self.labels[index], self.names[index]
+    def __getitem__(self, index) -> Batch:
+        if not isinstance(index, list):
+            index = [index]
+        batch = Batch.from_data_list([self.data[i] for i in index])
+        return batch
 
 class DatasetInitializer:
     r""" It initializes the train/test/validation SkeletonDatasets, using KFold strategy.
@@ -55,18 +64,18 @@ class DatasetInitializer:
         
         with open(save_dir, "rb") as f:
             import pickle
-            data, labels, names = pickle.load(f)
+            x, labels, names = pickle.load(f)
         
         if filterout_unlabeled:
             mask = labels != 'unknown'
-            data = data[mask]
+            x = x[mask]
             labels = labels[mask]
             names = names[mask]
 
         # Shuffle dataset
         indices = np.arange(labels.size)
         np.random.shuffle(indices)
-        self._data = data[indices]
+        self._x = x[indices]
         self._labels = labels[indices]
         self._names = names[indices]
 
@@ -99,11 +108,11 @@ class DatasetInitializer:
             test_indices = np.concatenate(test_indices).flatten()
             train_indices = np.concatenate(train_indices).flatten()
 
-            self.train = SkeletonDataset(self._data[train_indices], self._names[train_indices], 
+            self.train = SkeletonDataset(self._x[train_indices], self._names[train_indices], 
                     self._label_indices[train_indices])
-            self.val = SkeletonDataset(self._data[val_indices], self._names[val_indices], 
+            self.val = SkeletonDataset(self._x[val_indices], self._names[val_indices], 
                     self._label_indices[val_indices])
-            self.test = SkeletonDataset(self._data[test_indices], self._names[test_indices], 
+            self.test = SkeletonDataset(self._x[test_indices], self._names[test_indices], 
                     self._label_indices[test_indices])
 
         _set_datasets()

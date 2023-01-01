@@ -31,4 +31,4 @@ class Skeleton:
         inter_frame_edges = np.concatenate([row, col])
         edges = np.concatenate([edges, inter_frame_edges])
 
-        return edges
+        return torch.from_numpy(edges)
