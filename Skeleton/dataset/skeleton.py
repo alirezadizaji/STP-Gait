@@ -17,24 +17,24 @@ class SkeletonDataset(Dataset):
 
         super().__init__()
 
-        X: torch.Tensor = torch.from_numpy(X)
+        X: torch.Tensor = torch.from_numpy(X).float()
         Y: torch.Tensor = torch.from_numpy(Y)
 
         assert X.size(0) == names.size == Y.size(0), f"Mismatch number of samples between data ({X.size(0)}), names ({names.size}) and labels ({Y.size(0)})."
 
-        edge_index = Skeleton.get_simple_interframe_edges(X.shape[1])
+        N, T, V, C = X.size()
+        X = X.view(N, T * V, C)
+        edge_index = Skeleton.get_simple_interframe_edges(T)
         self.data: List[Data] = [Data(x=x, edge_index=edge_index, y=y, name=n) 
             for x, n, y in zip(X, names, Y)]
         
-
     def __len__(self):
         return len(self.data)
     
     def __getitem__(self, index) -> Batch:
         if not isinstance(index, list):
             index = [index]
-        batch = Batch.from_data_list([self.data[i] for i in index])
-        return batch
+        return [self.data[i] for i in index]
 
 class DatasetInitializer:
     r""" It initializes the train/test/validation SkeletonDatasets, using KFold strategy.
@@ -58,9 +58,10 @@ class DatasetInitializer:
         self.valK = 0
         self.testK = 1
 
-        save_dir = os.path.join(load_dir, "processed.pkl")
+        root_dir = os.path.dirname(load_dir)
+        save_dir = os.path.join(root_dir, "processed.pkl")
         if not os.path.exists(save_dir):
-            proc_gait_data(load_dir, save_dir, fillZ_empty)
+            proc_gait_data(load_dir, root_dir, fillZ_empty)
         
         with open(save_dir, "rb") as f:
             import pickle

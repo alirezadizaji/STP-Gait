@@ -2,7 +2,7 @@ from tqdm import tqdm
 
 from dig.xgraph.models import GCN_3l_BN
 import numpy as np
-from torch.utils.data import DataLoader
+from torch_geometric.data import Batch, DataLoader
 import torch
 import torch.nn.functional as F
 from torch.optim import Adam
@@ -16,13 +16,14 @@ def _calc_loss(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
 
 class Trainer:
     def __init__(self) -> None:
-        self.dataset_initializer = DatasetInitializer("../../Data/")
+        self.dataset_initializer = DatasetInitializer("../Data/output_1.pkl")
 
     def train(self, train_loader: DataLoader) -> None:
         correct = total = 0
         total_loss = list()
 
         for i, data in tqdm(enumerate(train_loader)):
+            data = data[0].to("cuda:0")
             # Ignore Z dimension
             data.x = data.x[..., [0, 1]] 
             x: torch.Tensor = self.model(data=data)
@@ -48,6 +49,7 @@ class Trainer:
 
         with torch.no_grad():
             for i, data in tqdm(enumerate(loader)):
+                data = data[0].to("cuda:0")
                 # Ignore Z dimension
                 data.x = data.x[..., [0, 1]]
                 x: torch.Tensor = self.model(data=data)
@@ -60,6 +62,7 @@ class Trainer:
 
     def run(self):
         self.model = GCN_3l_BN(model_level='graph', dim_node=2, dim_hidden=30, num_classes=12)
+        self.model.to("cuda:0")
         self.optimizer = Adam(self.model.parameters(), 1e-2)
         epochs = 100
         
@@ -73,4 +76,7 @@ class Trainer:
                 self.eval(val_loader, True)
             
             self.eval(test_loader, False)
-                
+
+if __name__ == "__main__":
+    trainer = Trainer()
+    trainer.run()
