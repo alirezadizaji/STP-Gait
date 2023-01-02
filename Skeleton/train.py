@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from torch.optim import Adam
 
 from .dataset import DatasetInitializer
+from .utils import stdout_stderr_setter
 
 def _calc_loss(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     x = F.log_softmax(x, dim=-1)
@@ -22,7 +23,7 @@ class Trainer:
         correct = total = 0
         total_loss = list()
 
-        for i, data in tqdm(enumerate(train_loader)):
+        for i, data in enumerate(train_loader):
             data = data[0].to("cuda:0")
             # Ignore Z dimension
             data.x = data.x[..., [0, 1]] 
@@ -48,7 +49,7 @@ class Trainer:
         correct = total = 0
 
         with torch.no_grad():
-            for i, data in tqdm(enumerate(loader)):
+            for i, data in enumerate(loader):
                 data = data[0].to("cuda:0")
                 # Ignore Z dimension
                 data.x = data.x[..., [0, 1]]
@@ -60,6 +61,7 @@ class Trainer:
         
             print(f'epoch {self.epoch_num} {name} acc {correct/total}', flush=True)
 
+    @stdout_stderr_setter("../Results/1_simple_GCN3l")
     def run(self):
         self.model = GCN_3l_BN(model_level='graph', dim_node=2, dim_hidden=30, num_classes=12)
         self.model.to("cuda:0")
