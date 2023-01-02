@@ -63,21 +63,22 @@ class Trainer:
 
     @stdout_stderr_setter("../Results/1_simple_GCN3l")
     def run(self):
-        self.model = GCN_3l_BN(model_level='graph', dim_node=2, dim_hidden=30, num_classes=12)
+        self.model = GCN_3l_BN(model_level='graph', dim_node=2, dim_hidden=60, num_classes=6)
         self.model.to("cuda:0")
-        self.optimizer = Adam(self.model.parameters(), 1e-2)
+        self.optimizer = Adam(self.model.parameters(), 1e-3)
         epochs = 100
         
-        with self.dataset_initializer:
-            train_loader = DataLoader(self.dataset_initializer.train, batch_size=32, shuffle=True)
-            val_loader = DataLoader(self.dataset_initializer.val, batch_size=32)
-            test_loader = DataLoader(self.dataset_initializer.test, batch_size=32)
+        for _ in range(self.dataset_initializer.K):
+            with self.dataset_initializer:
+                train_loader = DataLoader(self.dataset_initializer.train, batch_size=32, shuffle=True)
+                val_loader = DataLoader(self.dataset_initializer.val, batch_size=32)
+                test_loader = DataLoader(self.dataset_initializer.test, batch_size=32)
 
-            for self.epoch_num in range(epochs):
-                self.train(train_loader)
-                self.eval(val_loader, True)
-            
-            self.eval(test_loader, False)
+                for self.epoch_num in range(epochs):
+                    self.train(train_loader)
+                    self.eval(val_loader, True)
+                
+                self.eval(test_loader, False)
 
 if __name__ == "__main__":
     trainer = Trainer()

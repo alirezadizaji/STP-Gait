@@ -44,6 +44,9 @@ class DatasetInitializer:
         fillZ_empty (bool, optional): If `True`, then fill Z with zero value, O.W. process patient steps to get approximate Z locations. Defaults to `True`.
         filterout_unlabeled (bool, optional): If `True`, then filter out cases labeled as `unlabeled`. Defaults to `True`.
         K (int, optional): Number of KFolds in general. Defaults to `10`.
+    
+    NOTE:
+        Each validation and test sets will get 1/K partial of the whole dataset.
 
     Returns:
         Tuple[Dataset, Dataset, Dataset]: train/test/validation SkeletonDataset instances.
@@ -68,7 +71,7 @@ class DatasetInitializer:
             x, labels, names = pickle.load(f)
         
         if filterout_unlabeled:
-            mask = labels != 'unknown'
+            mask = labels != 'unlabeled'
             x = x[mask]
             labels = labels[mask]
             names = names[mask]
@@ -117,7 +120,8 @@ class DatasetInitializer:
                     self._label_indices[test_indices])
 
         _set_datasets()
-
+        print(f"@@@ K(={self.K})Fold applied for SkeletonDataset: valK: {self.valK}, testK: {self.testK}. @@@", flush=True)
+        
         return None
      
     def __exit__(self, exc_type, exc_value, exc_traceback):
