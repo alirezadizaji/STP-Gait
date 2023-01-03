@@ -17,13 +17,16 @@ class SkeletonDataset(Dataset):
 
         super().__init__()
 
+        lower_part_node_indices = np.delete(np.arange(Skeleton.num_nodes), Skeleton.upper_part_node_indices)
+        X = X[..., lower_part_node_indices, :]
+
         X: torch.Tensor = torch.from_numpy(X).float()
         Y: torch.Tensor = torch.from_numpy(Y)
 
         assert X.size(0) == names.size == Y.size(0), f"Mismatch number of samples between data ({X.size(0)}), names ({names.size}) and labels ({Y.size(0)})."
 
         N, T, V, C = X.size()
-        X = X.view(N, T * V, C)
+        X = X.reshape(N, T * V, C)
         edge_index = Skeleton.get_simple_interframe_edges(T, use_lower_part=True)
         self.data: List[Data] = [Data(x=x, edge_index=edge_index, y=y, name=n) 
             for x, n, y in zip(X, names, Y)]

@@ -25,23 +25,27 @@ class Skeleton:
         dst_mask = dst[:, np.newaxis] == Skeleton.upper_part_node_indices[np.newaxis, :]
         dst_mask = dst_mask.sum(1) == 0
 
-        mask = np.logical_or(src_mask, dst_mask)
+        mask = np.logical_and(src_mask, dst_mask)
+        edges_1d = np.concatenate([src[mask], dst[mask]])
+        u, indices = np.unique(edges_1d, return_inverse=True)
+        res = np.stack(np.split(indices, 2))
 
-        return np.stack([src[mask], dst[mask]])
+        return res
 
     @staticmethod
     def get_simple_interframe_edges(num_frames: int, dilation: int = 30, use_lower_part: bool = False) -> torch.Tensor:
         edges = Skeleton.self_loop_edges if not use_lower_part else Skeleton.lower_part_edges()
         M = edges[0].size
+        num_nodes = np.unique(edges).size
         edges = np.tile(edges, num_frames)
-        start_index = np.arange(num_frames).repeat(M) * Skeleton.num_nodes
+        start_index = np.arange(num_frames).repeat(M) * num_nodes
         edges = edges + start_index[np.newaxis, :]
 
         # Build inter frame edges
         if dilation > 1:
-            node_indices = np.arange(num_frames * Skeleton.num_nodes)
+            node_indices = np.arange(num_frames * num_nodes)
             diff = node_indices[:, np.newaxis] - node_indices[np.newaxis, :]
-            row, col = np.nonzero(np.logical_and(np.abs(diff) % (Skeleton.num_nodes * dilation) == 0, np.abs(diff) > 0))
+            row, col = np.nonzero(np.logical_and(np.abs(diff) % (num_nodes * dilation) == 0, np.abs(diff) > 0))
             inter_frame_edges = np.stack([row, col], axis=0)
             edges = np.concatenate([edges, inter_frame_edges], axis=1)
 
