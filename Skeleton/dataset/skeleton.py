@@ -24,7 +24,7 @@ class SkeletonDataset(Dataset):
 
         N, T, V, C = X.size()
         X = X.view(N, T * V, C)
-        edge_index = Skeleton.get_simple_interframe_edges(T)
+        edge_index = Skeleton.get_simple_interframe_edges(T, use_lower_part=True)
         self.data: List[Data] = [Data(x=x, edge_index=edge_index, y=y, name=n) 
             for x, n, y in zip(X, names, Y)]
         
@@ -75,7 +75,7 @@ class DatasetInitializer:
             x = x[mask]
             labels = labels[mask]
             names = names[mask]
-
+        
         # Shuffle dataset
         indices = np.arange(labels.size)
         np.random.shuffle(indices)
