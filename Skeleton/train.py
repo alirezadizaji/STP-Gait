@@ -19,7 +19,10 @@ class Trainer:
     def __init__(self) -> None:
         self.dataset_initializer = DatasetInitializer("../Data/output_1.pkl")
 
+
     def train(self, train_loader: DataLoader) -> None:
+        self.model.train()
+
         correct = total = 0
         total_loss = list()
 
@@ -44,7 +47,10 @@ class Trainer:
 
         print(f'epoch {self.epoch_num} train acc {correct/total}', flush=True)
 
+
     def eval(self, loader, val: bool):
+        self.model.eval()
+
         name = "val" if val else "test"
         correct = total = 0
 
@@ -61,14 +67,16 @@ class Trainer:
         
             print(f'epoch {self.epoch_num} {name} acc {correct/total}', flush=True)
 
+
     @stdout_stderr_setter("../Results/1_simple_GCN3l")
-    def run(self):
-        self.model = GCN_3l_BN(model_level='graph', dim_node=2, dim_hidden=60, num_classes=6)
-        self.model.to("cuda:0")
-        self.optimizer = Adam(self.model.parameters(), 1e-3)
+    def run(self):        
         epochs = 100
-        
+
         for _ in range(self.dataset_initializer.K):
+            self.model = GCN_3l_BN(model_level='graph', dim_node=2, dim_hidden=60, num_classes=6)
+            self.model.to("cuda:0")
+            self.optimizer = Adam(self.model.parameters(), 1e-3)
+
             with self.dataset_initializer:
                 train_loader = DataLoader(self.dataset_initializer.train, batch_size=32, shuffle=True)
                 val_loader = DataLoader(self.dataset_initializer.val, batch_size=32)
@@ -79,6 +87,7 @@ class Trainer:
                     self.eval(val_loader, True)
                 
                 self.eval(test_loader, False)
+
 
 if __name__ == "__main__":
     trainer = Trainer()
