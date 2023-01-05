@@ -100,16 +100,15 @@ def generate_inter_frames_edge_index_mode2(T: int, V: int, I: int = 30, offset: 
     Returns:
         np.ndarray: generated inter-frame edge set
     """
-
+    if offset is None:
+        offset = I
+        
     # To make computations easier, let's suppose each inter-frame chunks (EVEN the LAST ONE) has the same number of frames
     remained = T % I
-    M = (T + remained) // I
-
-    # Total number of nodes within each inter-frame chunk
-    L = I * V
+    M = (T - remained + I) // offset
 
     # node indices within each chunk LOCALLY
-    chunk_node_index = np.tile(np.arange(V), I) + np.repeat(np.arange(I), V) # L
+    chunk_node_index = np.tile(np.arange(V), I) + np.repeat(np.arange(I), V) # I * V (= L)
     
     # Find inter-frame edge indices within each chunk LOCALLY
     diff = chunk_node_index[:, np.newaxis] - chunk_node_index[np.newaxis, :] # L * L
@@ -117,10 +116,9 @@ def generate_inter_frames_edge_index_mode2(T: int, V: int, I: int = 30, offset: 
     src, dst = np.nonzero(np.logical_and(diff % I == 0, diff > 0))
     chunk_edge_index = np.stack([src, dst])
     E = chunk_edge_index.shape[1]
-    K = M * E
 
     # Find inter-frame edge indices within each chunk GLOBALLY
-    chunks_start_index = np.repeat(np.arange(M) * L, E) # K
+    chunks_start_index = np.repeat(np.linspace(M) * offset * V, E) # M * E (= K)
     chunks_edge_index = np.tile(chunk_edge_index, (1, M)) # 2, K
     chunks_edge_index = chunks_edge_index + chunks_start_index[np.newaxis, :] # 2, K
 
