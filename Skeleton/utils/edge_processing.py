@@ -118,7 +118,7 @@ def generate_inter_frames_edge_index_mode2(T: int, V: int, I: int = 30, offset: 
     E = chunk_edge_index.shape[1]
 
     # Find inter-frame edge indices within each chunk GLOBALLY
-    chunks_start_index = np.repeat(np.linspace(M) * offset * V, E) # M * E (= K)
+    chunks_start_index = np.repeat(np.arange(M) * offset * V, E) # M * E (= K)
     chunks_edge_index = np.tile(chunk_edge_index, (1, M)) # 2, K
     chunks_edge_index = chunks_edge_index + chunks_start_index[np.newaxis, :] # 2, K
 
