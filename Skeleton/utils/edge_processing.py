@@ -13,21 +13,24 @@ def remove_duplicate_edges(edge_index: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: edge_index after removing duplicate edges
     """
-
+    edge_index = edge_index.astype(np.uint16)
     src, dst = edge_index
     E = src.size
 
     # find the source-destination difference between each two edges
     diff_src = src[:, np.newaxis] - src[np.newaxis, :] # E, E
-    diff_dst = dst[:, np.newaxis] - dst[np.newaxis, :] # E, E
-
 
     # find the indices of edges having the same source
     same_src = np.nonzero(diff_src == 0)
     idx_src1, idx_src2 = same_src
+    ## To prevent Memory leakage
+    del diff_src 
 
     # checkout if corresponding destinations are equal too
+    diff_dst = dst[:, np.newaxis] - dst[np.newaxis, :] # E, E
     mask = diff_dst[idx_src1, idx_src2] == 0
+    ## To prevent Memory leakage
+    del diff_dst
 
     # generate a mask to ignore duplicate (latter) edges
     edge_mask = np.ones(E, dtype=np.bool)
@@ -126,5 +129,9 @@ def generate_inter_frames_edge_index_mode2(T: int, V: int, I: int = 30, offset: 
     src, dst = chunks_edge_index
     mask = np.logical_and(src < forbidden_start_node_index, dst < forbidden_start_node_index)
     chunks_edge_index = np.stack([src[mask], dst[mask]])
+
+    # Due to overlapping chunking of consecutive frames, it is possible to have duplicate edges, therefore remove them.
+    if offset is not None and offset < I:
+        chunks_edge_index = remove_duplicate_edges(chunks_edge_index)
 
     return chunks_edge_index

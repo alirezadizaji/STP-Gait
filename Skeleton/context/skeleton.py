@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from ..utils import remove_duplicate_edges, replicate_edge_index_in_frames, \
+from ..utils import replicate_edge_index_in_frames, \
     generate_inter_frames_edge_index_mode1, generate_inter_frames_edge_index_mode2
 
 class Skeleton:
@@ -61,5 +61,4 @@ class Skeleton:
 
         inter_frame_edges = generate_inter_frames_edge_index_mode2(T, V, I)
         edge_index = np.concatenate([edge_index, inter_frame_edges], axis=1)
-        edge_index = remove_duplicate_edges(edge_index)
-        return torch.from_numpy(edge_index)  
+        return torch.from_numpy(edge_index.astype(np.int64))  
