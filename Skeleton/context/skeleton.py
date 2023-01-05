@@ -36,7 +36,7 @@ class Skeleton:
         return res
 
     @staticmethod
-    def get_simple_interframe_edges(T: int, dilation: int = 30, use_lower_part: bool = False) -> torch.Tensor:
+    def get_vanilla_edges(T: int, use_lower_part: bool = False):
         edge_index = Skeleton.self_loop_edges
         if use_lower_part:
             edge_index = Skeleton.lower_part_edges(edge_index)
@@ -44,6 +44,12 @@ class Skeleton:
         V = np.unique(edge_index).size
         edge_index = replicate_edge_index_in_frames(edge_index, T)
 
+        return edge_index, V
+
+    @staticmethod
+    def get_simple_interframe_edges(T: int, dilation: int = 30, use_lower_part: bool = False) -> torch.Tensor:
+        edge_index, V = Skeleton.get_vanilla_edges(T, use_lower_part)
+        
         inter_frame_edges = generate_inter_frames_edge_index_mode1(T, V, dilation)
         edge_index = np.concatenate([edge_index, inter_frame_edges], axis=1)
 
@@ -51,14 +57,9 @@ class Skeleton:
 
     @staticmethod
     def get_interframe_edges_mode2(T: int, I: int = 30, use_lower_part: bool = False) -> torch.Tensor:
-        edge_index = Skeleton.self_loop_edges
-        if use_lower_part:
-            edge_index = Skeleton.lower_part_edges(edge_index)
-
-        V = np.unique(edge_index).size
-        edge_index = replicate_edge_index_in_frames(edge_index, T)
+        edge_index, V = Skeleton.get_vanilla_edges(T, use_lower_part)
 
         inter_frame_edges = generate_inter_frames_edge_index_mode2(T, V, I)
         edge_index = np.concatenate([edge_index, inter_frame_edges], axis=1)
         edge_index = remove_duplicate_edges(edge_index)
-        return edge_index  
+        return torch.from_numpy(edge_index)  

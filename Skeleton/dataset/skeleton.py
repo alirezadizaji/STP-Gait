@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List
+from typing import Callable, Dict, List
 
 import numpy as np
 import torch
@@ -8,26 +8,38 @@ from torch_geometric.data import Data, Batch
 
 from ..context.skeleton import Skeleton
 from ..data import proc_gait_data
+from ..enums import EdgeType
 
 class SkeletonDataset(Dataset):
     def __init__(self, 
             X: np.ndarray,
             names: np.ndarray,
-            Y: np.ndarray) -> None:
+            Y: np.ndarray,
+            edge_type: EdgeType = EdgeType.DEFAULT,
+            use_lower_part: bool = False,
+            **kwargs) -> None:
 
         super().__init__()
-
         lower_part_node_indices = np.delete(np.arange(Skeleton.num_nodes), Skeleton.upper_part_node_indices)
-        X = X[..., lower_part_node_indices, :]
+        
+        if use_lower_part:
+            X = X[..., lower_part_node_indices, :]
 
         X: torch.Tensor = torch.from_numpy(X).float()
         Y: torch.Tensor = torch.from_numpy(Y)
 
         assert X.size(0) == names.size == Y.size(0), f"Mismatch number of samples between data ({X.size(0)}), names ({names.size}) and labels ({Y.size(0)})."
-
         N, T, V, C = X.size()
+
+        # Take edge index set
+        if edge_type == EdgeType.DEFAULT:
+            edge_index = torch.from_numpy(Skeleton.get_vanilla_edges(T, use_lower_part)[0])
+        elif edge_type == EdgeType.INTER_FRAME_M1:
+            edge_index = Skeleton.get_simple_interframe_edges(T, use_lower_part=use_lower_part, **kwargs)
+        elif edge_type == EdgeType.INTER_FRAME_M2:
+            edge_index = Skeleton.get_interframe_edges_mode2(T, use_lower_part=use_lower_part, **kwargs)
+        
         X = X.reshape(N, T * V, C)
-        edge_index = Skeleton.get_simple_interframe_edges(T, use_lower_part=True)
         self.data: List[Data] = [Data(x=x, edge_index=edge_index, y=y, name=n) 
             for x, n, y in zip(X, names, Y)]
         
@@ -38,6 +50,15 @@ class SkeletonDataset(Dataset):
         if not isinstance(index, list):
             index = [index]
         return [self.data[i] for i in index]
+
+def generate_skeleton_dataset(
+        edge_type: EdgeType = EdgeType.DEFAULT, 
+        use_lower_part: bool = False,
+        **kwargs):
+    def generator(X: np.ndarray, names: np.ndarray, Y: np.ndarray):
+        return SkeletonDataset(X, names, Y, edge_type, use_lower_part, **kwargs)
+
+    return generator
 
 class DatasetInitializer:
     r""" It initializes the train/test/validation SkeletonDatasets, using KFold strategy.
@@ -58,7 +79,12 @@ class DatasetInitializer:
             load_dir: str,
             fillZ_empty: bool = True,
             filterout_unlabeled: bool = True,
-            K: int = 10) -> None:
+            K: int = 10,
+            edge_type: EdgeType = EdgeType.DEFAULT,
+            use_lower_part: bool = False,
+            **kwargs) -> None:
+
+        self.dataset_generator = generate_skeleton_dataset(edge_type, use_lower_part, **kwargs)
 
         self.K = K
         self.valK = 0
@@ -115,11 +141,11 @@ class DatasetInitializer:
             test_indices = np.concatenate(test_indices).flatten()
             train_indices = np.concatenate(train_indices).flatten()
 
-            self.train = SkeletonDataset(self._x[train_indices], self._names[train_indices], 
+            self.train = self.dataset_generator(self._x[train_indices], self._names[train_indices], 
                     self._label_indices[train_indices])
-            self.val = SkeletonDataset(self._x[val_indices], self._names[val_indices], 
+            self.val = self.dataset_generator(self._x[val_indices], self._names[val_indices], 
                     self._label_indices[val_indices])
-            self.test = SkeletonDataset(self._x[test_indices], self._names[test_indices], 
+            self.test = self.dataset_generator(self._x[test_indices], self._names[test_indices], 
                     self._label_indices[test_indices])
 
         _set_datasets()

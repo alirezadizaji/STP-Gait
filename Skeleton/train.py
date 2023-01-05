@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from torch.optim import Adam
 
 from .dataset import DatasetInitializer
+from .enums import EdgeType
 from .utils import stdout_stderr_setter
 
 def _calc_loss(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
@@ -17,8 +18,8 @@ def _calc_loss(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
 
 class Trainer:
     def __init__(self) -> None:
-        self.dataset_initializer = DatasetInitializer("../Data/output_1.pkl")
-
+        self.dataset_initializer = DatasetInitializer("../Data/output_1.pkl", fillZ_empty=True, 
+            filterout_unlabeled=True, K=10, edge_type=EdgeType.INTER_FRAME_M2, use_lower_part=False, I=30)
 
     def train(self, train_loader: DataLoader) -> None:
         self.model.train()
