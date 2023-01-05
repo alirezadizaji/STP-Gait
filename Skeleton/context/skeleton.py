@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 import torch
 
@@ -56,9 +58,10 @@ class Skeleton:
         return torch.from_numpy(edge_index)
 
     @staticmethod
-    def get_interframe_edges_mode2(T: int, I: int = 30, use_lower_part: bool = False) -> torch.Tensor:
+    def get_interframe_edges_mode2(T: int, I: int = 30, offset: Optional[int] = None, 
+            use_lower_part: bool = False) -> torch.Tensor:
         edge_index, V = Skeleton.get_vanilla_edges(T, use_lower_part)
 
-        inter_frame_edges = generate_inter_frames_edge_index_mode2(T, V, I)
+        inter_frame_edges = generate_inter_frames_edge_index_mode2(T, V, I, offset)
         edge_index = np.concatenate([edge_index, inter_frame_edges], axis=1)
         return torch.from_numpy(edge_index.astype(np.int64))  

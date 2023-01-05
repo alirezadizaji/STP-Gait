@@ -129,7 +129,7 @@ def generate_inter_frames_edge_index_mode2(T: int, V: int, I: int = 30, offset: 
     chunks_edge_index = np.stack([src[mask], dst[mask]])
 
     # Due to overlapping chunking of consecutive frames, it is possible to have duplicate edges, therefore remove them.
-    if offset is not None and offset < I:
+    if offset < I:
         chunks_edge_index = remove_duplicate_edges(chunks_edge_index)
 
     return chunks_edge_index
