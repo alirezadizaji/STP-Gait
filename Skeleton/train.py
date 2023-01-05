@@ -19,7 +19,7 @@ def _calc_loss(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
 class Trainer:
     def __init__(self) -> None:
         self.dataset_initializer = DatasetInitializer("../Data/output_1.pkl", fillZ_empty=True, 
-            filterout_unlabeled=True, K=10, edge_type=EdgeType.INTER_FRAME_M2, use_lower_part=False, I=30)
+            filterout_unlabeled=True, K=10, edge_type=EdgeType.INTER_FRAME_M2, use_lower_part=False, I=60, offset=30)
 
     def train(self, train_loader: DataLoader) -> None:
         self.model.train()
@@ -69,7 +69,7 @@ class Trainer:
             print(f'epoch {self.epoch_num} {name} acc {correct/total}', flush=True)
 
 
-    @stdout_stderr_setter("../Results/2_gcn3l_lower_part_edges")
+    @stdout_stderr_setter("../Results/4_gcn3l_m2_I_60_offset_30")
     def run(self):        
         epochs = 300
 
