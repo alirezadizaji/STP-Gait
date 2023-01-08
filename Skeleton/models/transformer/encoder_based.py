@@ -10,7 +10,6 @@ class Transformer(nn.Module):
 
     Args:
         inp_dim (int, optional): Input dimension at the beginning of forward. Defaults to `50`.
-        d_enc (int, optional): Dimension size to encode input into before encoder part. Defaults to `256`.
         d_model (int, optional): Encoder layer dimension size. Defaults to `512`.
         enc_n_heads (int, optional): Encoder layer number of heads. Defaults to `6`.
         n_enc_layers (int, optional): Encoder number of layers. Defaults to `3`.
@@ -18,7 +17,7 @@ class Transformer(nn.Module):
         mask_fill_value (float, optional): Value to fill masked locations. Defaults to `-1e3`.
         apply_loss_in_mask_loc (bool, optional): If `True`, then apply mean squared loss only to masked location, O.W. on the whole part. Defaults to `False`.
     """
-    def __init__(self, inp_dim: int = 50, d_enc: int = 256, d_model: int = 512, enc_n_heads: int = 6,
+    def __init__(self, inp_dim: int = 50, d_model: int = 256, enc_n_heads: int = 6,
             n_enc_layers: int = 3, mask_ratio: float = 0.01, mask_fill_value: float = -1e3,
             apply_loss_in_mask_loc: bool = False) -> None:
         super().__init__()
