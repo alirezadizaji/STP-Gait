@@ -10,11 +10,15 @@ from ..preprocess import preprocessing
 from ..utils import timer
 
 @timer
-def proc_gait_data(load_dir: str, save_dir: str, fillZ_empty: bool = False) -> None:
+def proc_gait_data(load_dir: str, save_dir: str, fillZ_empty: bool = False, 
+        normalize: bool = False) -> None:
     """ Processes Raw gait dataset (CSV file) provided by OpenPose
 
     Args:
-        load_dir (str): CSV raw data directory to be loaded
+        load_dir (str): CSV raw data directory to be loaded. It must all parts of the file directory, including its name too.
+        save_dir (str): Where to save the processed file. The file name will always be `processed.pkl`.
+        fillZ_empty (bool): If True, then fill Z dimension as zero, O.W. fill it by processing patient steps information.
+        normalize (bool): If True, then normalize patient locations using gaussian and minimax normalization, O.W. leave it intact.
     """
     num_features = 3
     num_nodes = 25
@@ -72,7 +76,7 @@ def proc_gait_data(load_dir: str, save_dir: str, fillZ_empty: bool = False) -> N
     away_idxs = np.nonzero(walk_directions == WalkDirection.AWAY)
     data[away_idxs, ..., 2] = data[away_idxs, ..., 2].max((1, 2)) - data[away_idxs, ..., 2]
     
-    data, labels, names = preprocessing(data, labels, names)
+    data, labels, names = preprocessing(data, labels, names, normalize=normalize)
 
     with open(os.path.join(save_dir, "processed.pkl"), 'wb') as f:
         pickle.dump((data, labels, names), f)
