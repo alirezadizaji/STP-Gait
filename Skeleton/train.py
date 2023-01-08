@@ -9,6 +9,7 @@ from torch.optim import Adam
 
 from .dataset import DatasetInitializer
 from .enums import EdgeType
+from .models.transformer import SimpleTransformer
 from .utils import stdout_stderr_setter
 
 def _calc_loss(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
@@ -74,7 +75,8 @@ class Trainer:
         epochs = 300
 
         for _ in range(self.dataset_initializer.K):
-            self.model = GCN_3l_BN(model_level='graph', dim_node=2, dim_hidden=60, num_classes=6)
+            # self.model = GCN_3l_BN(model_level='graph', dim_node=2, dim_hidden=60, num_classes=6)
+            self.model = SimpleTransformer(apply_loss_in_mask_loc=True)
             self.model.to("cuda:0")
             self.optimizer = Adam(self.model.parameters(), 1e-4)
 

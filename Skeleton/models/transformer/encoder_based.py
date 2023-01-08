@@ -3,7 +3,7 @@ from typing import Tuple
 import torch
 from torch import nn
 
-class Transformer(nn.Module):
+class SimpleTransformer(nn.Module):
     r""" This Transformer does not have decoder and instead before and after the encoder 
     part, there are two linear modules to map input into a dimension space and then 
     revert it back to original space.
