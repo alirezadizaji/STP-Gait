@@ -10,7 +10,7 @@ from torch.optim import Adam
 from .dataset import DatasetInitializer
 from .enums import EdgeType
 from .models.transformer import SimpleTransformer
-from .utils import stdout_stderr_setter
+from .utils import stdout_stderr_setter, timer
 
 def _calc_loss(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     x = F.log_softmax(x, dim=-1)
@@ -69,7 +69,7 @@ class Trainer:
         
             print(f'epoch {self.epoch_num} {name} acc {correct/total}', flush=True)
 
-
+    @timer
     @stdout_stderr_setter("../Results/4_gcn3l_m2_I_60_offset_30")
     def run(self):        
         epochs = 300
