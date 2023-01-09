@@ -32,8 +32,14 @@ class Trainer:
             data = data[0].to("cuda:0")
             # Ignore Z dimension
             data.x = data.x[..., [0, 1]] 
-            x: torch.Tensor = self.model(data=data)
-            loss = _calc_loss(x, data.y)
+            datas = data.to_data_list()
+            x = torch.stack([d.x for d in datas])
+            y = torch.stack([d.y for d in datas])
+            x = x.reshape(-1, train_loader.dataset.T, train_loader.dataset.V, x.size(-1))
+
+            x, loss, _ = self.model(x)
+
+            # loss = _calc_loss(x, y)
             loss.backward()
             self.optimizer.step()
             self.optimizer.zero_grad()
@@ -41,13 +47,13 @@ class Trainer:
             total_loss.append(loss.item())
     
             y_pred = x.argmax(-1)
-            correct += torch.sum(y_pred == data.y).item()
+            # correct += torch.sum(y_pred == data.y).item()
             total += data.y.numel()
         
             if i % 20 == 0:
                 print(f'epoch {self.epoch_num} iter {i} loss value {np.mean(total_loss)}', flush=True)
 
-        print(f'epoch {self.epoch_num} train acc {correct/total}', flush=True)
+        print(f'epoch {self.epoch_num} train acc {correct/(total + 1e-4)}', flush=True)
 
 
     def eval(self, loader, val: bool):
@@ -61,16 +67,22 @@ class Trainer:
                 data = data[0].to("cuda:0")
                 # Ignore Z dimension
                 data.x = data.x[..., [0, 1]]
-                x: torch.Tensor = self.model(data=data)
+                datas = data.to_data_list()
+                x = torch.stack([d.x for d in datas])
+                y = torch.stack([d.y for d in datas])
+                x = x.reshape(-1, loader.dataset.T, loader.dataset.V, x.size(-1))
+
+                x, loss, _ = self.model(x)
+                # x: torch.Tensor = self.model(data.x)
                 
                 y_pred = x.argmax(-1)
-                correct += torch.sum(y_pred == data.y).item()
+                # correct += torch.sum(y_pred == data.y).item()
                 total += data.y.numel()
         
-            print(f'epoch {self.epoch_num} {name} acc {correct/total}', flush=True)
+            print(f'epoch {self.epoch_num} {name} acc {correct/total} loss {loss.item()}', flush=True)
 
     @timer
-    @stdout_stderr_setter("../Results/4_gcn3l_m2_I_60_offset_30")
+    # @stdout_stderr_setter("../Results/4_gcn3l_m2_I_60_offset_30")
     def run(self):        
         epochs = 300
 
@@ -78,7 +90,7 @@ class Trainer:
             # self.model = GCN_3l_BN(model_level='graph', dim_node=2, dim_hidden=60, num_classes=6)
             self.model = SimpleTransformer(apply_loss_in_mask_loc=True)
             self.model.to("cuda:0")
-            self.optimizer = Adam(self.model.parameters(), 1e-4)
+            self.optimizer = Adam(self.model.parameters(), 1e-2)
 
             with self.dataset_initializer:
                 train_loader = DataLoader(self.dataset_initializer.train, batch_size=12, shuffle=True)

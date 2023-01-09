@@ -17,7 +17,7 @@ class SimpleTransformer(nn.Module):
         mask_fill_value (float, optional): Value to fill masked locations. Defaults to `-1e3`.
         apply_loss_in_mask_loc (bool, optional): If `True`, then apply mean squared loss only to masked location, O.W. on the whole part. Defaults to `False`.
     """
-    def __init__(self, inp_dim: int = 50, d_model: int = 256, enc_n_heads: int = 6,
+    def __init__(self, inp_dim: int = 50, d_model: int = 256, enc_n_heads: int = 8,
             n_enc_layers: int = 3, mask_ratio: float = 0.01, mask_fill_value: float = -1e3,
             apply_loss_in_mask_loc: bool = False) -> None:
         super().__init__()
@@ -42,20 +42,27 @@ class SimpleTransformer(nn.Module):
         self._mse = nn.MSELoss()
     
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        N, T, _, _ = x.size()
-        x = x.reshape(N, T, -1)                             # N, T, V, C -> N, T, L
-        y = x.clone()
+        with torch.no_grad():
+            N, T, _, _ = x.size()
+            x = x.reshape(N, T, -1)                             # N, T, V, C -> N, T, L
+            y = x.clone()
 
-        mask = torch.zeros(N, T).bool().to(x.device)
-        if self.training:
-            idx = torch.randint(0, T, size=(N, int(self._mask_ratio * T)))
-            mask[idx] = True
-        else:
-            # For evaluation, mask only particular frames
-            mask[:, 1::10] = True
-        mask = mask.unsqueeze(2)
+            mask = torch.zeros(N, T).bool().to(x.device)
+            if self.training:
+                F = int(self._mask_ratio * T)
+                idx1 = torch.arange(N).repeat(F)
+                idx2 = torch.randint(0, T, size=(N, F)).flatten()
+                mask[idx1, idx2] = True
+            else:
+                # For evaluation, mask only particular frames
+                mask[:, 1::10] = True
+            mask = mask.unsqueeze(2)
 
-        x[mask] = self._mask_fill_value
+            # Just to make shapes OK
+            mask = torch.logical_and(torch.ones_like(x).bool(), mask)
+
+            x[mask] = self._mask_fill_value
+
         x = self.encoder_lin(x)
         x = self.encoder(x)
         x = self.revert_lin(x)
