@@ -94,7 +94,7 @@ if __name__ == "__main__":
     
     with open(save_path, "rb") as f:
         import pickle
-        data, labels, names = pickle.load(f)
+        data, labels, names, _ = pickle.load(f)
 
     visualizer = initializer(args.save_vis_dir)
     visualizer(data, labels, names)
