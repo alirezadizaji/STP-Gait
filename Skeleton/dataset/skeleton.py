@@ -6,9 +6,11 @@ import torch
 from torch.utils.data import Dataset
 from torch_geometric.data import Data, Batch
 
+
 from ..context.skeleton import Skeleton
 from ..data import proc_gait_data
 from ..enums import EdgeType
+from ..preprocess.pad_empty_frames import pad_empty_frames
 
 class SkeletonDataset(Dataset):
     def __init__(self, 
@@ -68,7 +70,8 @@ class DatasetInitializer:
         fillZ_empty (bool, optional): If `True`, then fill Z with zero value, O.W. process patient steps to get approximate Z locations. Defaults to `True`.
         filterout_unlabeled (bool, optional): If `True`, then filter out cases labeled as `unlabeled`. Defaults to `True`.
         K (int, optional): Number of KFolds in general. Defaults to `10`.
-    
+        use_lower_part (bool, optional):If True, then use only lower skeleton parts, O.W. use all parts. Defaults to `False`.
+        remove_missed_head_frames (bool, optional): If True, then remove frames whose head missed. Defaults to `False`.
     NOTE:
         Each validation and test sets will get 1/K partial of the whole dataset.
 
@@ -82,6 +85,7 @@ class DatasetInitializer:
             K: int = 10,
             edge_type: EdgeType = EdgeType.DEFAULT,
             use_lower_part: bool = False,
+            remove_missed_head_frames: bool = False,
             **kwargs) -> None:
 
         self.dataset_generator = generate_skeleton_dataset(edge_type, use_lower_part, **kwargs)
@@ -97,13 +101,24 @@ class DatasetInitializer:
         
         with open(save_dir, "rb") as f:
             import pickle
-            x, labels, names = pickle.load(f)
+            x, labels, names, missed_head = pickle.load(f)
         
+        # e.g. -> C1, Missed, C3, C1, Missed, C3 ... -> C1, C3, C1, C3, ...
+        if remove_missed_head_frames:
+            new_x = np.zeros_like(x)
+            seq_i, frame_i = np.nonzero(missed_head)
+            _, counts = np.unique(seq_i, return_counts=True)
+            frame_ii = np.concatenate([np.arange(c)] for c in counts).flatten()
+            new_x[seq_i, frame_ii] = x[seq_i, frame_i]
+            x = new_x
+            x = pad_empty_frames(x)
+            
         if filterout_unlabeled:
             mask = labels != 'unlabeled'
             x = x[mask]
             labels = labels[mask]
             names = names[mask]
+            missed_head = missed_head[mask]
         
         # Shuffle dataset
         indices = np.arange(labels.size)
@@ -111,6 +126,7 @@ class DatasetInitializer:
         self._x = x[indices]
         self._labels = labels[indices]
         self._names = names[indices]
+        self._missed_head = missed_head[indices]
 
         # Split indices belong to each label into K subsets
         self._label_to_splits: Dict[int, List[np.ndarray]] = {}
