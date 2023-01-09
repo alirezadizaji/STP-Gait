@@ -103,7 +103,7 @@ class DatasetInitializer:
             import pickle
             x, labels, names, missed_head = pickle.load(f)
         
-        # e.g. -> C1, Missed, C3, C1, Missed, C3 ... -> C1, C3, C1, C3, ...
+        # e.g. (Ci: ith chunks of frames) -> C1, Missed, C3, C1, Missed, C3 ... -> C1, C3, C1, C3, ...
         if remove_missed_head_frames:
             new_x = np.zeros_like(x)
             seq_i, frame_i = np.nonzero(missed_head)
@@ -112,7 +112,7 @@ class DatasetInitializer:
             new_x[seq_i, frame_ii] = x[seq_i, frame_i]
             x = new_x
             x = pad_empty_frames(x)
-            
+
         if filterout_unlabeled:
             mask = labels != 'unlabeled'
             x = x[mask]
