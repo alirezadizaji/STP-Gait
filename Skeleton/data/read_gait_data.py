@@ -1,5 +1,5 @@
 import os
-from typing import Tuple
+from typing import Optional
 import pickle
 
 import numpy as np
@@ -10,15 +10,19 @@ from ..preprocess import preprocessing
 from ..utils import timer
 
 @timer
-def proc_gait_data(load_dir: str, save_dir: str, fillZ_empty: bool = False, 
-        normalize: bool = False) -> None:
+def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl", 
+        fillZ_empty: bool = True, normalize: bool = False, critical_limit: int = 30, 
+        non_critical_limit: Optional[int] = None) -> None:
     """ Processes Raw gait dataset (CSV file) provided by OpenPose
 
     Args:
         load_dir (str): CSV raw data directory to be loaded. It must all parts of the file directory, including its name too.
-        save_dir (str): Where to save the processed file. The file name will always be `processed.pkl`.
-        fillZ_empty (bool): If True, then fill Z dimension as zero, O.W. fill it by processing patient steps information.
-        normalize (bool): If True, then normalize patient locations using gaussian and minimax normalization, O.W. leave it intact.
+        save_dir (str): Where to save the processed file.
+        filename (str, optional): Filename to store processed file with. Default to processed.pkl.
+        fillZ_empty (bool, optional): If True, then fill Z dimension as zero, O.W. fill it by processing patient steps information.
+        normalize (bool, optional): If True, then normalize patient locations using gaussian and minimax normalization, O.W. leave it intact.
+        critical_limit (int, optional): Number (in frames) of consecutive NaN values permitted to be filled for critical joints. Default to 30.
+        non_critical_limit (int, optional): Number (in frames) of consecutive NaN values permitted to be filled for non critical joints. Default to None: every consecutive is permitted.
     """
     num_features = 3
     num_nodes = 25
@@ -76,7 +80,8 @@ def proc_gait_data(load_dir: str, save_dir: str, fillZ_empty: bool = False,
     away_idxs = np.nonzero(walk_directions == WalkDirection.AWAY)
     data[away_idxs, ..., 2] = data[away_idxs, ..., 2].max((1, 2)) - data[away_idxs, ..., 2]
     
-    data, labels, names, hard_cases_id = preprocessing(data, labels, names, normalize=normalize)
+    data, labels, names, hard_cases_id = preprocessing(data, labels, names, normalize=normalize, 
+        critical_limit=critical_limit, non_critical_limit=non_critical_limit)
 
     # Find frames whose head is very near to the center of the skeleton 
     # y_centers = data[..., 8, 1]
@@ -87,6 +92,6 @@ def proc_gait_data(load_dir: str, save_dir: str, fillZ_empty: bool = False,
     # ratio = (upper - lower) / lower
     # missed_head = ratio < 0.1                   # N, T
 
-    with open(os.path.join(save_dir, "processed.pkl"), 'wb') as f:
+    with open(os.path.join(save_dir, filename), 'wb') as f:
         pickle.dump((data, labels, names, hard_cases_id), f)
         # pickle.dump((data, labels, names, missed_head, hard_cases_id), f)

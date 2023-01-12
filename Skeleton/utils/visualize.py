@@ -20,14 +20,19 @@ def initializer(work_dir: str) -> Func:
     
     os.makedirs(work_dir, exist_ok=True)
 
-    def visualize_samples(data: np.ndarray, labels: np.ndarray, names: np.ndarray) -> None:
+    def visualize_samples(raw: np.ndarray, processed: np.ndarray, labels: np.ndarray, 
+            names: np.ndarray) -> None:
+            
         # Swap Y-Z axis for just visualization
-        data[..., [1, 2]] = data[..., [2, 1]]
+        raw[..., [1, 2]] = raw[..., [2, 1]]
+        processed[..., [1, 2]] = processed[..., [2, 1]]
 
-        T = data.shape[1]
-        maxes, mines = data.max((0, 1, 2)), data.min((0, 1, 2))
+        T = raw.shape[1]
+        raw_maxes, raw_mines = raw.max((0, 1, 2)), raw.min((0, 1, 2))
+        processed_maxes, processed_mines = processed.max((0, 1, 2)), processed.min((0, 1, 2))
 
-        def _pre_setting_ax():
+        def _pre_setting_ax(ax, maxes, mines):
+            mines = mines - 1e-2
             ax.clear()
             ax.view_init(elev=5, azim=-87)
 
@@ -44,28 +49,39 @@ def initializer(work_dir: str) -> Func:
             ax.set_zticks([mines[2], (mines[2] + maxes[2]) / 2, maxes[2]])
         
         def animate(skeleton):
-            frame_index = skeleton_index[0]
-            _pre_setting_ax()
+            raw, processed = np.array_split(skeleton, 2, axis=0)
+            raw, processed = raw[0], processed[0]
 
+            frame_index = skeleton_index[0]
+            _pre_setting_ax(axl, raw_maxes, raw_mines)
+            _pre_setting_ax(axr, processed_maxes, processed_mines)
+            axl.title.set_text('RAW')
+            axr.title.set_text('PROCESSED')
+            plt.suptitle(f'Skeleton {index} Frame #{frame_index} of {T}\n (label: {label})')
+            
             for e in Skeleton._one_direction_edges.T:
-                joint_locs = skeleton[e]
+                rjoint_locs = raw[e]
+                pjoint_locs = processed[e]
 
                 # plot them
-                ax.plot(joint_locs[:, 0],joint_locs[:, 1],joint_locs[:, 2], color='green')
-
-            plt.title(f'Skeleton {index} Frame #{frame_index} of {T}\n (label: {label})')
+                axl.plot(rjoint_locs[:, 0],rjoint_locs[:, 1],rjoint_locs[:, 2], color='blue')
+                axr.plot(pjoint_locs[:, 0],pjoint_locs[:, 1],pjoint_locs[:, 2], color='green')
+            
             skeleton_index[0] += 1
+            return axl, axr
 
-            return ax
-
-        for index, (skeleton, name, label) in enumerate(zip(data, names, labels)):
-            print(f'Sample name: {name}\nLabel: {label}\n')
+        for index, (raw_skeleton, proc_skeleton, name, label) in enumerate(zip(raw, processed, names, labels)):
+            print(f'@@@ Start Visualization: name {name}, Label: {label} @@@', flush=True)
+            
             mpl.rcParams['legend.fontsize'] = 10
             fig = plt.figure()
-            ax = fig.gca(projection='3d')
-            _pre_setting_ax()
+            axl = fig.add_subplot(1, 2, 1, projection='3d')
+            axr = fig.add_subplot(1, 2, 2, projection='3d')
+            _pre_setting_ax(axl, raw_maxes, raw_mines)
+            _pre_setting_ax(axr, processed_maxes, processed_mines)
 
             skeleton_index = [0]
+            skeleton = np.stack([raw_skeleton, proc_skeleton], axis=1)
             ani = FuncAnimation(fig, animate, skeleton)
             
             # saving to m4 using ffmpeg writer
@@ -89,20 +105,24 @@ def get_parser():
 if __name__ == "__main__":
     args = get_parser()
 
-    save_path = os.path.join(args.save_dir, "processed.pkl")
-    if not os.path.exists(save_path):
-        proc_gait_data(args.load_path, args.save_dir)
+    def _read_data(filename: str, critical_limit: int, non_critical_limit: int):
+        save_path = os.path.join(args.save_dir, filename)
+        if not os.path.exists(save_path):
+            proc_gait_data(args.load_path, args.save_dir, filename=filename,
+                critical_limit=critical_limit, non_critical_limit=non_critical_limit)
+        
+        with open(save_path, "rb") as f:
+            import pickle
+            data, labels, names, hard_cases_id = pickle.load(f)
+
+            # Fill NaN location same as the center of body
+            idx1, idx2, idx3, _ = np.nonzero(np.isnan(data))
+            data[idx1, idx2, idx3] = data[idx1, idx2, [Skeleton.CENTER]]
+
+        return data, labels, names, hard_cases_id
     
-    with open(save_path, "rb") as f:
-        import pickle
-        data, labels, names, hard_cases_id = pickle.load(f)
-    
-    # DO NOT VISUALIZE HARD CASES SAMPLES
-    mask = np.ones(data.shape[0], np.bool)
-    mask[hard_cases_id] = False
-    data = data[mask]
-    labels = labels[mask]
-    names = names[mask]
-    
+    raw, labels, names, _ = _read_data("raw_vis.pkl", critical_limit = 0, non_critical_limit = 0)
+    processed, _, _, _ = _read_data("proc_vis.pkl", critical_limit = None, non_critical_limit = None)
+
     visualizer = initializer(args.save_vis_dir)
-    visualizer(data, labels, names)
+    visualizer(raw, processed, labels, names)

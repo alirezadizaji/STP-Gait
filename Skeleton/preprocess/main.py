@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 
@@ -7,24 +7,29 @@ from .fill_na_locs import fill_unknown_locs
 from ..context import Skeleton
 
 def preprocessing(data: np.ndarray, labels: np.ndarray, names: np.ndarray, 
-        normalize: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        normalize: bool = False, critical_limit: int = 30, 
+        non_critical_limit: Optional[int] = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """ Preprocesses the skeleton data 
 
     Args:
         data (np.ndarray): shape N, T, V, C
         remove_hard_cases (bool): If True then remove cases which are hard to processed (Due to having NA locations). _default_: False
         normalize (bool, optional): If True, then apply gaussian and minmax normalization, O.W. keep it intact. _default_: False
+        critical_limit (int, optional): Number (in frames) of consecutive NaN values permitted to be filled for critical joints. Default to 30.
+        non_critical_limit (int, optional): Number (in frames) of consecutive NaN values permitted to be filled for non critical joints. Default to None: every consecutive is permitted.
+
     Returns:
         Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: _description_
     """
-    data, hard_cases_id = fill_unknown_locs(data)
+    data, hard_cases_id = fill_unknown_locs(data, critical_limit, non_critical_limit)
     print(f"@@ (NaN Location): Done @@", flush=True)
 
     # Pad empty frames by replaying non-empty frames
     data = pad_empty_frames(data)
+    print(f"@@ (Pad Empty Frames): Done @@", flush=True)
+
     center = data[:, [0], [Skeleton.CENTER], :][:, None, ...]
     data = data - center
-    print(f"@@ (Pad Empty Frames): Done @@", flush=True)
     
     # Revert upside-down direction
     data[..., 1] = -data[..., 1]

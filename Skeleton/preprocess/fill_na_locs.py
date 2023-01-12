@@ -33,7 +33,8 @@ def fill_unknown_locs(data: np.ndarray, critical_limit:int = 30,
                 continue
             
             df = pd.DataFrame(skeleton, index=np.arange(T))
-            skeleton = df.fillna(method='bfill', limit=limit).fillna(method='ffill', limit=limit).values
+            if limit is None or limit > 0:
+                skeleton = df.fillna(method='bfill', limit=limit).fillna(method='ffill', limit=limit).values
             
             if np.any(np.isnan(skeleton)):
                 ids.append(idx)
