@@ -10,6 +10,7 @@ from typing_extensions import Protocol
 
 from ..context import Skeleton
 from ..data import proc_gait_data
+from ..utils import stdout_stderr_setter
 
 
 class Func(Protocol):
@@ -101,7 +102,8 @@ def get_parser():
     args = parser.parse_args()
     return args
 
-if __name__ == "__main__":
+@stdout_stderr_setter("./visualize_logs/")
+def run_main():
     import warnings
     warnings.filterwarnings("ignore")
 
@@ -128,3 +130,6 @@ if __name__ == "__main__":
 
     visualizer = initializer(args.save_vis_dir)
     visualizer(raw, processed, labels, names)
+
+if __name__ == "__main__":
+    run_main()
