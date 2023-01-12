@@ -57,7 +57,7 @@ def initializer(work_dir: str) -> Func:
             _pre_setting_ax(axr, processed_maxes, processed_mines)
             axl.title.set_text('RAW')
             axr.title.set_text('PROCESSED')
-            plt.suptitle(f'Skeleton {index} Frame #{frame_index} of {T}\n (label: {label})')
+            plt.suptitle(f'Skeleton {index} Frame #{frame_index} of {T} (label: {label})')
             
             for e in Skeleton._one_direction_edges.T:
                 rjoint_locs = raw[e]
@@ -90,7 +90,7 @@ def initializer(work_dir: str) -> Func:
             os.makedirs(save_dir, exist_ok=True)
             ani.save(os.path.join(save_dir, f'{name}.mp4'), writer=writervideo)
 
-            print(f"@@@\nVisualization done for {name}\n@@@", flush=True)
+            print(f"@@@Visualization done for {name}@@@", flush=True)
 
     return visualize_samples
 
