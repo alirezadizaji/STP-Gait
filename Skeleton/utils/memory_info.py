@@ -19,7 +19,7 @@ def get_chunk_size(data: np.ndarray) -> int:
         num_bytes = 2
     elif data.dtype in [np.float32, np.int32, np.uint32]:
         num_bytes = 4
-    if data.dtype in [np.float64, np.int64, np.uint64]:
+    elif data.dtype in [np.float64, np.int64, np.uint64]:
         num_bytes = 8
     
     data_bytes = data.size * num_bytes

@@ -1,15 +1,16 @@
-from argparse import ArgumentParser
 import os
-from typing_extensions import Protocol
+from argparse import ArgumentParser
 
 import matplotlib as mpl
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
 import matplotlib.animation as animation
+import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.animation import FuncAnimation
+from typing_extensions import Protocol
 
 from ..context import Skeleton
 from ..data import proc_gait_data
+
 
 class Func(Protocol):
     def __call__(self, data: np.ndarray, labels: np.ndarray, names: np.ndarray) -> None:
@@ -94,7 +95,14 @@ if __name__ == "__main__":
     
     with open(save_path, "rb") as f:
         import pickle
-        data, labels, names, _ = pickle.load(f)
-
+        data, labels, names, hard_cases_id = pickle.load(f)
+    
+    # DO NOT VISUALIZE HARD CASES SAMPLES
+    mask = np.ones(data.shape[0], np.bool)
+    mask[hard_cases_id] = False
+    data = data[mask]
+    labels = labels[mask]
+    names = names[mask]
+    
     visualizer = initializer(args.save_vis_dir)
     visualizer(data, labels, names)

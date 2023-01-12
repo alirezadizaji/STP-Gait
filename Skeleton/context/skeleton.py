@@ -7,7 +7,16 @@ from ..utils import replicate_edge_index_in_frames, \
     generate_inter_frames_edge_index_mode1, generate_inter_frames_edge_index_mode2
 
 class Skeleton:
+    CENTER: int = 8
     num_nodes: int = 25
+
+    HEAD_EYES_EARS: np.ndarray = np.array([0, 15, 16, 17, 18])
+    SHOULDERS: np.ndarray = np.array([2, 5])
+    FOOTS: np.ndarray = np.array([19, 20, 21, 22, 23, 24])
+    ELBOWS_HANDS: np.ndarray = np.array([3, 4, 6, 7])
+    VERTERBAL_TO_FOOT: np.ndarray = np.array([1, CENTER, 9, 12, 10, 13, 11, 14])
+    NON_CRITICAL: np.ndarray = np.concatenate((HEAD_EYES_EARS, SHOULDERS, FOOTS))
+    CRITICAL: np.ndarray = np.concatenate((ELBOWS_HANDS, VERTERBAL_TO_FOOT))
 
     _one_direction_edges: np.ndarray = np.array([
         [0, 15], [0, 16], [15, 17], [16, 18], [0, 1],

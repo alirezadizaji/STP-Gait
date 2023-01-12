@@ -48,7 +48,7 @@ def pad_empty_frames(data: np.ndarray) -> np.ndarray:
     # To prevent Memory overloading, chunk data indexing into several subset operations
     tmp_indices = np.arange(seq_num_repeated.size)
     chunk_size = get_chunk_size(data)
-    for ti in np.array_split(tmp_indices, chunk_size):
+    for ti in np.array_split(tmp_indices, chunk_size * 5):
         # Put non-empty frames at first; As it fills "repeated", the empty frames are also filled simultaneously.
         new_data[seq_num_repeated[ti], frame_num_repeated[ti]] = \
             data[seq_num_repeated[ti], non_empty_frames_repeated[ti]]
