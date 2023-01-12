@@ -46,9 +46,9 @@ def initializer(work_dir: str) -> Func:
             frame_index = skeleton_index[0]
             _pre_setting_ax()
 
-            for i, j in Skeleton._one_direction_edges:
-                joint_locs = skeleton[[i,j]]
-                
+            for e in Skeleton._one_direction_edges.T:
+                joint_locs = skeleton[e]
+
                 # plot them
                 ax.plot(joint_locs[:, 0],joint_locs[:, 1],joint_locs[:, 2], color='green')
 
@@ -89,8 +89,8 @@ if __name__ == "__main__":
     args = get_parser()
 
     save_path = os.path.join(args.save_dir, "processed.pkl")
-    if not os.path.exists(save_path):
-        proc_gait_data(args.load_path, args.save_dir)
+    # if not os.path.exists(save_path):
+    proc_gait_data(args.load_path, args.save_dir)
     
     with open(save_path, "rb") as f:
         import pickle

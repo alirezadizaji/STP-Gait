@@ -24,7 +24,7 @@ def get_chunk_size(data: np.ndarray) -> int:
     
     data_bytes = data.size * num_bytes
     chunks = data_bytes / (mem_bytes * 2) # Multiply by two; It is supposed that half of memory should be empty.
-    chunks = min(1, chunks)
+    chunks = max(1, chunks)
     print(f"@ Data Chunking: Available Memory {mem_bytes}B, Data usage {data_bytes}B, Chunk size {chunks} @", flush=True)
 
     return chunks    

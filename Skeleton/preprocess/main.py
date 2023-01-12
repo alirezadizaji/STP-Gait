@@ -15,8 +15,8 @@ def preprocessing(data: np.ndarray, labels: np.ndarray, names: np.ndarray,
     Returns:
         np.ndarray: _description_
     """
-    print(f"@ Preprocessing phase: Number of samples {N} @", flush=True)
     N = data.shape[0]
+    print(f"@ Preprocessing phase: Number of samples {N} @", flush=True)
     data, hard_cases_id = fill_unknown_locs(data)
 
     mask = np.ones(data.shape[0], np.bool)
