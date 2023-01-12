@@ -89,8 +89,8 @@ if __name__ == "__main__":
     args = get_parser()
 
     save_path = os.path.join(args.save_dir, "processed.pkl")
-    # if not os.path.exists(save_path):
-    proc_gait_data(args.load_path, args.save_dir)
+    if not os.path.exists(save_path):
+        proc_gait_data(args.load_path, args.save_dir)
     
     with open(save_path, "rb") as f:
         import pickle
