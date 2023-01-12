@@ -22,7 +22,7 @@ def initializer(work_dir: str) -> Func:
 
     def visualize_samples(raw: np.ndarray, processed: np.ndarray, labels: np.ndarray, 
             names: np.ndarray) -> None:
-            
+
         # Swap Y-Z axis for just visualization
         raw[..., [1, 2]] = raw[..., [2, 1]]
         processed[..., [1, 2]] = processed[..., [2, 1]]
@@ -32,7 +32,6 @@ def initializer(work_dir: str) -> Func:
         processed_maxes, processed_mines = processed.max((0, 1, 2)), processed.min((0, 1, 2))
 
         def _pre_setting_ax(ax, maxes, mines):
-            mines = mines - 1e-2
             ax.clear()
             ax.view_init(elev=5, azim=-87)
 
@@ -103,6 +102,9 @@ def get_parser():
     return args
 
 if __name__ == "__main__":
+    import warnings
+    warnings.filterwarnings("ignore")
+
     args = get_parser()
 
     def _read_data(filename: str, critical_limit: int, non_critical_limit: int):
