@@ -15,6 +15,8 @@ def preprocessing(data: np.ndarray, labels: np.ndarray, names: np.ndarray,
     Returns:
         np.ndarray: _description_
     """
+    print(f"@ Preprocessing phase: Number of samples {N} @", flush=True)
+    N = data.shape[0]
     data, hard_cases_id = fill_unknown_locs(data)
 
     mask = np.ones(data.shape[0], np.bool)
@@ -22,12 +24,14 @@ def preprocessing(data: np.ndarray, labels: np.ndarray, names: np.ndarray,
     data = data[mask]
     labels = labels[mask]
     names = names[mask]
-    
+    print(f"@@ (NaN Location Filling): Number of samples {data.shape[0]} remained after filtering hard samples @@", flush=True)
+
     # Pad empty frames by replaying non-empty frames
     data = pad_empty_frames(data)
     center = data[:, [0], [center_joint_idx], :][:, None, ...]
     data = data - center
-
+    print(f"@@ (Pad Empty Frames): Done @@", flush=True)
+    
     # Revert upside-down direction
     data[..., 1] = -data[..., 1]
     

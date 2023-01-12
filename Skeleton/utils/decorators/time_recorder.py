@@ -8,7 +8,7 @@ def timer(func: Callable):
         start = time()
         out = func(*args, **kwargs)
         end = time()
-        print(f"@@@ TIME RECORDER: FUNC {func_name}, DURATION: {end - start}s. @@@", flush=True)
+        print(f"% TIME RECORDER: FUNC {func_name}, DURATION: {end - start}s. %", flush=True)
         return out
     
     return call

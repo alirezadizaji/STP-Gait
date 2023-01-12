@@ -1,6 +1,8 @@
 import numpy as np
 
+from ..utils import get_chunk_size, timer
 
+@timer
 def pad_empty_frames(data: np.ndarray) -> np.ndarray:
     """ It swaps non-empty frames to the beginning of the sequence at first place, and then fills empty frames
 
@@ -43,9 +45,10 @@ def pad_empty_frames(data: np.ndarray) -> np.ndarray:
     
     assert seq_num_repeated.size == frame_num_repeated.size == non_empty_frames_repeated.size
 
-    # To prevent CPU leakage, chunk data indexing into ten subset operations
+    # To prevent Memory overloading, chunk data indexing into several subset operations
     tmp_indices = np.arange(seq_num_repeated.size)
-    for ti in np.array_split(tmp_indices, 10):
+    chunk_size = get_chunk_size(data)
+    for ti in np.array_split(tmp_indices, chunk_size):
         # Put non-empty frames at first; As it fills "repeated", the empty frames are also filled simultaneously.
         new_data[seq_num_repeated[ti], frame_num_repeated[ti]] = \
             data[seq_num_repeated[ti], non_empty_frames_repeated[ti]]
