@@ -26,7 +26,7 @@ def global_seed(seed: int):
 
 def run_main(entrypoint: 'MainEntrypoint') -> None:
     print(f"%%% RUNNING SEED {Constants.GLOBAL_SEED} %%%", flush=True)
-    entrypoint.main()
+    entrypoint.run()
 
 if __name__ == "__main__":
     Constants.GLOBAL_SEED = int(argv[1])

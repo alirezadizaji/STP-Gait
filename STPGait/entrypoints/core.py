@@ -35,15 +35,3 @@ class MainEntrypoint(ABC):
     @abstractmethod
     def run(self):
         """ Define running of the entrypoints here per each KFold split """
-    
-    @abstractmethod
-    def last_task(self):
-        """ Last task to be performed after all KFold operations """
-
-    def main(self):
-        for _ in range(self.kfold.K):
-            with self.kfold:
-                self.set_loaders()
-                self.run()
-        
-        self.last_task()

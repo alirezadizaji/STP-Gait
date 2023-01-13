@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import os
 from tqdm import tqdm
-from typing import Generic, TYPE_CHECKING, Optional, TypeVar
+from typing import Dict, Generic, TYPE_CHECKING, Optional, TypeVar
 
 from dig.xgraph.models import *
 import numpy as np
@@ -14,12 +14,12 @@ from ..enums import Separation
 if TYPE_CHECKING:
     from torch.utils.data import DataLoader
 
-T, U = TypeVar('T'), TypeVar('U')
-class TrainEntrypoint(MainEntrypoint, ABC, Generic[T], Generic[U]):
+T, U, W = TypeVar('T'), TypeVar('U'), TypeVar('W')
+class TrainEntrypoint(MainEntrypoint, ABC, Generic[T], Generic[U], Generic[W]):
 
-    def _get_weight_save_path(self):
+    def _get_weight_save_path(self, epoch):
         weight_dir_name = 'weights'
-        weight_save_path =  os.path.join("../Results/1_transformer", weight_dir_name, str(self.epoch), f"{self.kfold.valK}-{self.kfold.testK}")
+        weight_save_path =  os.path.join("../Results/1_transformer", weight_dir_name, f"{self.kfold.valK}-{self.kfold.testK}", str(epoch))
         os.makedirs(weight_save_path, exist_ok=True)
         return weight_save_path
 
@@ -99,16 +99,22 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[T], Generic[U]):
         # print(f'epoch {self.epoch} train acc {self.correct/self.total}', flush=True)
 
     @abstractmethod
-    def _eval_epoch_end(self, datasep: Separation) -> None:
+    def _eval_epoch_end(self, datasep: Separation) -> W:
         """ Any tasks that should be accomplished at the end of the evaluation epoch. """
         # acc = self.correct / self.total
         # print(f'epoch{self.epoch} {datasep} acc {acc}', flush=True)
 
-    def _save_model_weight(self) -> None:
-        torch.save(self.model.state_dict(), self._get_weight_save_path())
+    @abstractmethod
+    def best_epoch_criteria(self, best_epoch: int) -> bool:
+        """ Criteria that determines whether best epoch changes or not. """        
+        # val = self.val_criterias[self.kfold.valK, self.epoch]
+        # return val > self.val_criterias[self.kfold.valK, best_epoch]
 
-    def _remove_model_weight(self) -> None:
-        os.remove(self._get_weight_save_path(self.epoch))
+    def _save_model_weight(self) -> None:
+        torch.save(self.model.state_dict(), self._get_weight_save_path(self.epoch))
+
+    def _remove_model_weight(self, best_epoch: int) -> None:
+        os.remove(self._get_weight_save_path(best_epoch))
 
     def _train_for_one_epoch(self) -> None:
         self.model.train()
@@ -128,7 +134,7 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[T], Generic[U]):
 
         self._train_epoch_end()
 
-    def _validate_for_one_epoch(self, loader: 'DataLoader') -> None:
+    def _validate_for_one_epoch(self, loader: 'DataLoader') -> W:
         self.model.eval()
 
         self._eval_start()
@@ -138,8 +144,7 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[T], Generic[U]):
                 x = self._model_forwarding(data)
                 self._eval_iter_end(i, None, x, data)
 
-            self._eval_epoch_end()            
-            return acc
+            return self._eval_epoch_end()            
 
     def _early_stopping(self, epoch: int, best_epoch: Optional[int]) -> bool:
         thd = 50
@@ -149,23 +154,21 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[T], Generic[U]):
             return True
         
         return False
-        
-    def run(self):
+    
+    def _main(self):
         num_epochs = 200
-        val_accs = np.zeros(num_epochs)
         best_epoch = None
         for self.epoch in tqdm(range(num_epochs)):
             self._train_for_one_epoch()
-            val = self._validate_for_one_epoch(self.val_loader) 
-            val_accs[self.epoch] = val
-
+            val: W = self._validate_for_one_epoch(self.val_loader) 
+            self.val_criterias[self.kfold.valK, self.epoch] = val
+            
             # save only best epoch in terms of validation accuracy             
-            if best_epoch is None or val > val_accs[best_epoch]:
+            if self.best_epoch_criteria(best_epoch):
                 if best_epoch is not None:
                     self._remove_model_weight(best_epoch)
                 self._save_model_weight()
-                best_epoch = self.epoch
-                print(f"### Best epoch changed to {best_epoch} acc {val} ###", flush=True)
+                print(f"### Best epoch changed to {best_epoch} criteria {val} ###", flush=True)
 
             # check early stopping if necessary
             if self._early_stopping(best_epoch):
@@ -173,12 +176,20 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[T], Generic[U]):
                 break
 
         # evaluate best epoch on test set
-        best_epoch = val_accs.argmax()
         self.model.load_state_dict(torch.load(self._get_weight_save_path(best_epoch), map_location="cuda:0"))
-        test_acc =self._validate_for_one_epoch(self.test_loader)
-        val_acc = val_accs[best_epoch]
-        print(f"@@@@@ Best accuracy epoch {best_epoch} @@@@@\nval: {val_acc}, test: {test_acc}", flush=True)
+        test: W =self._validate_for_one_epoch(self.test_loader)
+        self.test_criterias[self.kfold.testK] = test
+        val: W = self.val_criterias[self.kfold.valK, best_epoch]
+        print(f"@@@@@ Best criteria ValK {self.kfold.valK} epoch {best_epoch} @@@@@\nval: {val}, test: {test}", flush=True)
 
 
-    def last_task(self):
-        pass
+    def run(self):
+        self.val_criterias: Dict[int, Dict[int, W]] = dict()
+        self.test_criterias: Dict[int, W] = dict()
+
+        for _ in range(self.kfold.K):
+            with self.kfold:
+                self.set_loaders()
+                self._main()
+        
+        print(f"@@@ Final Result on {self.kfold.K} KFold operation on test set: {np.mean(list(self.test_criterias.values()))} @@@", flush=True)
