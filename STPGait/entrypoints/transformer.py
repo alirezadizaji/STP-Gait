@@ -7,10 +7,10 @@ import torch
 import torch.nn.functional as F
 from torch.optim import Adam
 
-from .dataset import DatasetInitializer
-from .enums import EdgeType
-from .models.transformer import SimpleTransformer
-from .utils import stdout_stderr_setter, timer
+from ..dataset import DatasetInitializer
+from ..enums import EdgeType
+from ..models.transformer import SimpleTransformer
+from ..utils import stdout_stderr_setter, timer
 
 def _calc_loss(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
     x = F.log_softmax(x, dim=-1)
