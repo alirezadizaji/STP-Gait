@@ -34,4 +34,4 @@ class MainEntrypoint(ABC):
             
     @abstractmethod
     def run(self):
-        """ Define running of the entrypoints here per each KFold split """
+        """ Define running of the entrypoint here """
