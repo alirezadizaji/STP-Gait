@@ -20,7 +20,7 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[IN, OUT, C]):
     def _get_weight_save_path(self, epoch):
         weight_dir_name = 'weights'
         weight_save_path =  os.path.join("../Results/1_transformer", weight_dir_name, f"{self.kfold.valK}-{self.kfold.testK}", str(epoch))
-        os.makedirs(weight_save_path, exist_ok=True)
+        os.makedirs(os.path.dirname(weight_save_path), exist_ok=True)
         return weight_save_path
 
     @abstractmethod
@@ -146,10 +146,10 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[IN, OUT, C]):
 
             return self._eval_epoch_end(separation)            
 
-    def _early_stopping(self, epoch: int, best_epoch: Optional[int]) -> bool:
+    def _early_stopping(self, best_epoch: Optional[int]) -> bool:
         thd = 50
         best = best_epoch if best_epoch is not None else 0
-        difference = epoch - best
+        difference = self.epoch - best
         if difference >= thd:
             return True
         
@@ -164,10 +164,11 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[IN, OUT, C]):
             self.val_criterias[self.kfold.valK, self.epoch] = val
             
             # save only best epoch in terms of validation accuracy             
-            if self.best_epoch_criteria(best_epoch):
+            if best_epoch is None or self.best_epoch_criteria(best_epoch):
                 if best_epoch is not None:
                     self._remove_model_weight(best_epoch)
                 self._save_model_weight()
+                best_epoch = self.epoch
                 print(f"### Best epoch changed to {best_epoch} criteria {val} ###", flush=True)
 
             # check early stopping if necessary

@@ -28,9 +28,9 @@ class MainEntrypoint(ABC):
 
     def get_optimizer(self, optim_type: Optim) -> 'Optimizer':
         if optim_type == Optim.ADAM:
-            return Adam(self.model.parameters(), 1e-3)
+            return Adam(self.model.parameters(), 3e-3)
         elif optim_type == Optim.SGD:
-            return SGD(self.model.parameters(), 1e-3)
+            return SGD(self.model.parameters(), 3e-3)
             
     @abstractmethod
     def run(self):

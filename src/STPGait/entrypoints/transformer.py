@@ -71,7 +71,8 @@ class Entrypoint(TrainEntrypoint[IN, OUT, C]):
             print(f'epoch {self.epoch} iter {iter_num} loss value {np.mean(self.losses)}', flush=True)
 
     def _eval_iter_end(self, iter_num: int, separation: Separation, loss: torch.Tensor, x: OUT, data: IN) -> None:
-        self.losses.append(loss.item())
+        if ~np.isnan(loss.item()):
+            self.losses.append(loss.item())
 
         if separation == Separation.TEST:            
             self.names.append(self.test_loader.dataset.names[data[3]])
