@@ -68,7 +68,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, C]):
         self.losses.append(loss.item())
 
         if iter_num % 20 == 0:
-            print(f'epoch {self.epoch} loss value {np.mean(self.losses)}', flush=True)
+            print(f'epoch {self.epoch} iter {iter_num} loss value {np.mean(self.losses)}', flush=True)
 
     def _eval_iter_end(self, iter_num: int, separation: Separation, loss: torch.Tensor, x: OUT, data: IN) -> None:
         self.losses.append(loss.item())

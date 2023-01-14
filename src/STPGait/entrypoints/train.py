@@ -140,7 +140,9 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[IN, OUT, C]):
         with torch.no_grad():
             for i, data in enumerate(loader):
                 x = self._model_forwarding(data)
-                self._eval_iter_end(i, separation, None, x, data)
+                loss = self._calc_loss(x, data)
+
+                self._eval_iter_end(i, separation, loss, x, data)
 
             return self._eval_epoch_end(separation)            
 
