@@ -55,7 +55,7 @@ class KFoldSkeleton(KFoldInitializer[SkeletonDataset]):
         self._names = names[indices]
         self._hard_cases_id = hard_cases_id[indices]
         self._mask = self._generate_missed_frames()
-        
+
         super().__init__(K, init_valK, init_testK)
 
     def _generate_missed_frames(self) -> np.ndarray:
@@ -130,8 +130,8 @@ class KFoldSkeleton(KFoldInitializer[SkeletonDataset]):
         new_x[seq_i, frame_ii] = x[seq_i, frame_i]
         
         self._x[train_indices] = pad_empty_frames(new_x)
-        self._mask[train_indices]
+        self._mask[train_indices] = np.zeros_like(self._mask[train_indices], dtype=np.bool)
         set[Separation.TRAIN] = SkeletonDataset(self._x[train_indices], self._names[train_indices], 
-            self._label_indices[train_indices], mask=np.zeros_like(self._mask[train_indices], dtype=np.bool))
+            self._label_indices[train_indices], mask=self._mask[train_indices])
         
         return sets
