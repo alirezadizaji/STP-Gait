@@ -34,7 +34,8 @@ class KFoldSkeleton(KFoldInitializer[SkeletonDataset]):
         root_dir = os.path.dirname(load_dir)
         filename = "processed.pkl"
         save_dir = os.path.join(root_dir, filename)
-        proc_gait_data(load_dir, root_dir, filename, fillZ_empty)
+        if not os.path.exists(save_dir):
+            proc_gait_data(load_dir, root_dir, filename, fillZ_empty)
         
         with open(save_dir, "rb") as f:
             import pickle
