@@ -75,7 +75,12 @@ class Entrypoint(TrainEntrypoint[IN, OUT, C]):
             self.losses.append(loss.item())
 
         if separation == Separation.TEST:            
-            self.names.append(self.test_loader.dataset.names[data[3]])
+            names = self.test_loader.dataset.names[data[3]]
+            if isinstance(names, str):
+                names = [names]
+            else:
+                names = names.tolist()
+            self.names = self.names + names
             self.pred.append(x[0].detach().cpu().numpy())
                 
     def _train_epoch_end(self) -> None:
@@ -89,7 +94,10 @@ class Entrypoint(TrainEntrypoint[IN, OUT, C]):
             save_dir = f"../Results/1_transformer/encoder_based/{self.kfold.testK}/output.pkl"
             os.makedirs(os.path.dirname(save_dir), exist_ok=True)
             with open(save_dir, 'wb') as f:
-                pickle.dump((np.concatenate(self.pred), None, np.concatenate(self.names), None), f)
+                pred = np.concatenate(self.pred)
+                # N, T, V*C -> N, T, V, C
+                pred = np.stack(np.array_split(pred, self.test_loader.dataset.V, axis=2), axis=2)
+                pickle.dump((np.concatenate(self.pred), None, np.array(self.names), None), f)
 
         return np.mean(self.losses)
 

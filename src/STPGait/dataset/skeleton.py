@@ -19,6 +19,8 @@ class SkeletonDataset(Dataset):
 
         assert self.X.size(0) == self.names.size == self.Y.size(0) == self.mask.size(0), f"Mismatch number of samples between data ({X.size(0)}), names ({names.size}), labels ({Y.size(0)}), and masks ({self.mask.size(0)})."
         
+        self.V = self.X.size(2)
+        
     def __len__(self):
         return self.X.size(0)
     
