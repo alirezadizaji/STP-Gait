@@ -84,7 +84,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, C]):
 
         # SAVE TEST outputs
         if datasep == Separation.TEST:
-            save_dir = f"../Data/encoder_based/{self.kfold.testK}/output.pkl"
+            save_dir = f"../Results/1_transformer/encoder_based/{self.kfold.testK}/output.pkl"
             os.makedirs(os.path.dirname(save_dir), exist_ok=True)
             with open(save_dir, 'wb') as f:
                 pickle.dump((np.concatenate(self.pred), None, np.concatenate(self.names), None), f)
