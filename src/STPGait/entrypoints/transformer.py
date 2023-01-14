@@ -24,10 +24,13 @@ class Entrypoint(TrainEntrypoint[IN, OUT, C]):
             load_dir="../../Data/output_1.pkl",
             fillZ_empty=True,
             filterout_unlabeled=False)
-        model = SimpleTransformer(apply_loss_in_mask_loc=False)
-        model.to("cuda:0")
-        super().__init__(kfold, model)
+
+        super().__init__(kfold)
     
+    def get_model(self):
+        model = SimpleTransformer(apply_loss_in_mask_loc=False)
+        return model
+        
     def _model_forwarding(self, data: IN) -> OUT:
         x = data[0]
         x = x[..., [0, 1]]

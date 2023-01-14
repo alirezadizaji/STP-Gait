@@ -9,7 +9,7 @@ import torch
 from torch.nn import functional as F
 
 from .core import MainEntrypoint
-from ..enums import Separation
+from ..enums import Separation, Optim
 
 if TYPE_CHECKING:
     from torch.utils.data import DataLoader
@@ -190,7 +190,10 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[IN, OUT, C]):
 
         for _ in range(self.kfold.K):
             with self.kfold:
+                self.model = self.get_model()
+                self.model.to("cuda:0")
                 self.set_loaders()
+                self.set_optimizer(Optim.ADAM)
                 self._main()
         
         print(f"@@@ Final Result on {self.kfold.K} KFold operation on test set: {np.mean(list(self.test_criterias.values()))} @@@", flush=True)
