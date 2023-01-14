@@ -14,7 +14,7 @@ from ..enums.separation import Separation
 from ..models.transformer import SimpleTransformer
 from .train import TrainEntrypoint
 
-IN = Tuple[torch.Tensor, torch.Tensor, np.ndarray]
+IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, np.ndarray]
 OUT = Tuple[torch.Tensor, torch.Tensor]
 C = float
 
@@ -26,7 +26,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, C]):
             init_testK=1,
             load_dir="../Data/output_1.pkl",
             fillZ_empty=True,
-            filterout_unlabeled=True)
+            filterout_unlabeled=False)
         model = SimpleTransformer(apply_loss_in_mask_loc=False)
 
         super().__init__(kfold, model)
@@ -45,8 +45,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, C]):
                 idx2 = torch.randint(0, T, size=(N, F)).flatten()
                 mask[idx1, idx2] = True
             else:
-                # For evaluation, mask only particular frames
-                mask[:, 1::10] = True
+                mask = data[2]
             mask = mask.unsqueeze(2)
 
             # Just to make shapes OK
@@ -71,7 +70,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, C]):
         if iter_num % 20 == 0:
             print(f'epoch {self.epoch} loss value {np.mean(self.losses)}', flush=True)
 
-    def _eval_iter_end(self, iter_num: int, loss: torch.Tensor, x: OUT, data: IN) -> None:
+    def _eval_iter_end(self, iter_num: int, separation: Separation, loss: torch.Tensor, x: OUT, data: IN) -> None:
         self.losses.append(loss.item())
 
     def _train_epoch_end(self) -> None:

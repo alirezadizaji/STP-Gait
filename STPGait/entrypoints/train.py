@@ -81,10 +81,11 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[IN], Generic[OUT], Generic[C]
         #     print(f'epoch {self.epoch} iter {iter_num} loss value {np.mean(self.losses)}', flush=True)
 
     @abstractmethod
-    def _eval_iter_end(self, iter_num: int, loss: torch.Tensor, x: OUT, data: IN) -> None:
+    def _eval_iter_end(self, separation: Separation, iter_num: int, loss: torch.Tensor, x: OUT, data: IN) -> None:
         """ Any tasks that should be accomplished at the end of the evaluation iteration.
 
         Args:
+            separation (Separation): Loader belongs to this separation
             iter_num (int): Iteration number
             x (U): model output
             data (T): dataloader output
@@ -142,7 +143,7 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[IN], Generic[OUT], Generic[C]
             for i, data in enumerate(loader):
                 data: IN = data.to("cuda:0")
                 x = self._model_forwarding(data)
-                self._eval_iter_end(i, None, x, data)
+                self._eval_iter_end(i, separation, None, x, data)
 
             return self._eval_epoch_end(separation)            
 
