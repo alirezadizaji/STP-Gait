@@ -121,10 +121,10 @@ class KFoldSkeleton(KFoldInitializer[SkeletonDataset]):
             self._label_indices[test_indices], self._mask[test_indices])
         
         # Train dataset should not have missed frames at all.
-        train_missed = self._mask[train_indices]
+        train_not_missed = ~self._mask[train_indices]
         x = self._x[train_indices]
         new_x = np.zeros_like(x)
-        seq_i, frame_i = np.nonzero(train_missed)
+        seq_i, frame_i = np.nonzero(train_not_missed)
         _, counts = np.unique(seq_i, return_counts=True)
         frame_ii = np.concatenate([np.arange(c) for c in counts]).flatten()
         new_x[seq_i, frame_ii] = x[seq_i, frame_i]

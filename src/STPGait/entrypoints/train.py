@@ -122,8 +122,6 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[IN, OUT, C]):
 
         self._train_start()
         for i, data in enumerate(self.train_loader):
-            data: IN = data.to("cuda:0")
-
             x: OUT = self._model_forwarding(data)
             loss = self._calc_loss(x, data)
 
@@ -141,7 +139,6 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[IN, OUT, C]):
         self._eval_start()
         with torch.no_grad():
             for i, data in enumerate(loader):
-                data: IN = data.to("cuda:0")
                 x = self._model_forwarding(data)
                 self._eval_iter_end(i, separation, None, x, data)
 

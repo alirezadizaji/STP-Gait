@@ -25,11 +25,12 @@ class Entrypoint(TrainEntrypoint[IN, OUT, C]):
             fillZ_empty=True,
             filterout_unlabeled=False)
         model = SimpleTransformer(apply_loss_in_mask_loc=False)
-
+        model.to("cuda:0")
         super().__init__(kfold, model)
     
     def _model_forwarding(self, data: IN) -> OUT:
         x = data[0]
+        x = x[..., [0, 1]]
 
         with torch.no_grad():
             N, T, _, _ = x.size()
@@ -48,7 +49,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, C]):
             # Just to make shapes OK
             mask = torch.logical_and(torch.ones_like(x).bool(), mask)
         
-        x = self.model(x, mask)
+        x = self.model(x.to("cuda:0"), mask.to("cuda:0"))
         return x
 
     def _calc_loss(self, x: OUT, data: IN) -> torch.Tensor:
@@ -73,7 +74,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, C]):
         self.losses.append(loss.item())
 
         if separation == Separation.TEST:            
-            self.names.append(data[3])
+            self.names.append(self.test_loader.dataset.names[data[3]])
             self.pred.append(x[0].detach().cpu().numpy())
                 
     def _train_epoch_end(self) -> None:

@@ -20,9 +20,7 @@ class SkeletonDataset(Dataset):
         assert self.X.size(0) == self.names.size == self.Y.size(0) == self.mask.size(0), f"Mismatch number of samples between data ({X.size(0)}), names ({names.size}), labels ({Y.size(0)}), and masks ({self.mask.size(0)})."
         
     def __len__(self):
-        return len(self.data)
+        return self.X.size(0)
     
     def __getitem__(self, index) -> Tuple[torch.Tensor, torch.Tensor, np.ndarray]:
-        if not isinstance(index, list):
-            index = [index]
-        return self.X[index], self.Y[index], self.mask[index], self.names[index]
+        return self.X[index], self.Y[index], self.mask[index], index
