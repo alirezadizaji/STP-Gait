@@ -1,12 +1,9 @@
-from typing import Tuple
-from tqdm import tqdm
+import os
+from typing import List, Tuple
+import pickle
 
-from dig.xgraph.models import GCN_3l_BN
 import numpy as np
-from torch_geometric.data import Batch, DataLoader
 import torch
-import torch.nn.functional as F
-from torch.optim import Adam
 
 from ..dataset.KFold.skeleton import KFoldSkeleton
 from ..enums.separation import Separation
@@ -63,6 +60,8 @@ class Entrypoint(TrainEntrypoint[IN, OUT, C]):
 
     def _eval_start(self) -> None:
         self._train_start()
+        self.pred: List[np.ndarray] = list()
+        self.names: List[np.ndarray] = list()
 
     def _train_iter_end(self, iter_num: int, loss: torch.Tensor, x: OUT, data: IN) -> None:
         self.losses.append(loss.item())
@@ -73,11 +72,23 @@ class Entrypoint(TrainEntrypoint[IN, OUT, C]):
     def _eval_iter_end(self, iter_num: int, separation: Separation, loss: torch.Tensor, x: OUT, data: IN) -> None:
         self.losses.append(loss.item())
 
+        if separation == Separation.TEST:            
+            self.names.append(data[3])
+            self.pred.append(x[0].detach().cpu().numpy())
+                
     def _train_epoch_end(self) -> None:
         print(f'epoch {self.epoch} loss value {np.mean(self.losses)}', flush=True)
 
     def _eval_epoch_end(self, datasep: Separation) -> C:
         print(f'epoch {self.epoch} separation {datasep} loss value {np.mean(self.losses)}', flush=True)
+
+        # SAVE TEST outputs
+        if datasep == Separation.TEST:
+            save_dir = f"../Data/encoder_based/{self.kfold.testK}/output.pkl"
+            os.makedirs(os.path.dirname(save_dir), exist_ok=True)
+            with open(save_dir, 'wb') as f:
+                pickle.dump((np.concatenate(self.pred), None, np.concatenate(self.names), None), f)
+
         return np.mean(self.losses)
 
     def best_epoch_criteria(self, best_epoch: int) -> bool:

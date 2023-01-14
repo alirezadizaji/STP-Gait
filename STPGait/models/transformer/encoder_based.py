@@ -48,10 +48,13 @@ class SimpleTransformer(nn.Module):
         x = self.encoder(x)
         x = self.revert_lin(x)
 
-        if self._apply_loss_in_mask_loc:
-            loss = self._mse(x[mask], y[mask])
+        if self.training:
+            if self._apply_loss_in_mask_loc:
+                loss = self._mse(x[mask], y[mask])
+            else:
+                loss = self._mse(x, y)
         else:
-            loss = self._mse(x, y)
-        
+            loss = self._mse(x[~mask], y[~mask])
+                    
         return x, loss, mask
         
