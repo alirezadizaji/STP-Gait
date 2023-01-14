@@ -35,5 +35,5 @@ if __name__ == "__main__":
     script = import_module(f"STPGait.entrypoints.transformer")
     entrypoint: 'MainEntrypoint' = getattr(script, 'Entrypoint')()
 
-    run_main = stdout_stderr_setter("../")(run_main)
+    run_main = stdout_stderr_setter("../Results/1_transformer/")(run_main)
     run_main(entrypoint)
