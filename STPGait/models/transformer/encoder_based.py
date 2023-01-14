@@ -42,7 +42,7 @@ class SimpleTransformer(nn.Module):
         self._mse = nn.MSELoss()
     
     def forward(self, x: torch.Tensor, mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        x[mask] = self._mask_fill_value
+        y = x.clone()
 
         x = self.encoder_lin(x)
         x = self.encoder(x)
