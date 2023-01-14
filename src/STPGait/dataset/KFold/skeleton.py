@@ -32,9 +32,9 @@ class KFoldSkeleton(KFoldInitializer[SkeletonDataset]):
             filterout_unlabeled: bool = True) -> None:
 
         root_dir = os.path.dirname(load_dir)
-        save_dir = os.path.join(root_dir, "processed.pkl")
-        if not os.path.exists(save_dir):
-            proc_gait_data(load_dir, root_dir, fillZ_empty)
+        filename = "processed.pkl"
+        save_dir = os.path.join(root_dir, filename)
+        proc_gait_data(load_dir, root_dir, filename, fillZ_empty)
         
         with open(save_dir, "rb") as f:
             import pickle
@@ -53,7 +53,7 @@ class KFoldSkeleton(KFoldInitializer[SkeletonDataset]):
         self._x = x[indices]
         self._labels = labels[indices]
         self._names = names[indices]
-        self._hard_cases_id = hard_cases_id[indices]
+        self._hard_cases_id = hard_cases_id
         self._mask = self._generate_missed_frames()
 
         super().__init__(K, init_valK, init_testK)
@@ -67,15 +67,15 @@ class KFoldSkeleton(KFoldInitializer[SkeletonDataset]):
             np.ndarray: A mask, If an element is True, then that frame on that sequence has some missed information.
         """
         N, T = self._x.shape[0], self._x.shape[1]
-        self._mask = np.zeros((N, T), dtype=np.bool)
+        mask = np.zeros((N, T), dtype=np.bool)
 
         # First, mask frames having at least one NaN values
         nan_mask = np.isnan(self._x)
         idx1, idx2, idx3, _ = np.nonzero(nan_mask)
-        self._mask[idx1, idx2] = True
+        mask[idx1, idx2] = True
         ## Replace center location with NaN joints
-        self._x[idx1, idx2, idx3, :] = self._x[idx1, idx2, [0], :] 
-        assert np.all( ~np.nonzero(np.isnan(self._x)) ), "There is still NaN values among locations."
+        self._x[idx1, idx2, idx3, :] = self._x[idx1, idx2, [Skeleton.CENTER], :] 
+        assert np.all(~np.isnan(self._x)), "There is still NaN values among locations."
 
         # Second, checkout non NaN frames if there are some inconsistency between shoulders, toes, or heads locations.
         ## Critieria joints
@@ -89,22 +89,22 @@ class KFoldSkeleton(KFoldInitializer[SkeletonDataset]):
         x_heads_eyes_ears = self._x[:, :, Skeleton.HEAD_EYES_EARS, :] # N, T, V3, C
         
         ## Lower body
-        x_foots = self._x[:, Skeleton.WHOLE_FOOT, :] # N, T, V4, C
+        x_foots = self._x[:, :, Skeleton.WHOLE_FOOT, :] # N, T, V4, C
 
         ## Verifications
         vertical_up = np.concatenate((x_shoulders, x_heads_eyes_ears), axis=2)[..., 1] # N, T, VV
-        mask1 = ((vertical_up - x_center[..., 1]) / (vertical_up - x_lknee[..., 1])) < 0.1
-        mask1 = np.nonzero(mask1.sum(2))
+        mask1 = ((vertical_up - x_center[..., 1]) / (vertical_up - x_lknee[..., 1] + 1e-3)) < 0.1
+        mask1 = mask1.sum(2) > 0
         
         vertical_down = x_foots[..., 1] # N, T, VVV
-        mask2 = ((x_center[..., 1] - vertical_down) / (x_center[..., 1] - x_lknee[..., 1])) < 1
-        mask2 = np.nonzero(mask2.sum(2))
+        mask2 = ((x_center[..., 1] - vertical_down) / (x_center[..., 1] - x_lknee[..., 1] + 1e-3)) < 1
+        mask2 = mask2.sum(2) > 0
 
         horizontal = x_elbows_hands[..., 0] # N, T, VVVV        
-        mask3 = ((horizontal - x_center[..., 0]) / (x_lheap[..., 0] - x_center[..., 0])) < 0.1 # N, T, VV
-        mask3 = np.nonzero(mask3.sum(2))
+        mask3 = ((horizontal - x_center[..., 0]) / (x_lheap[..., 0] - x_center[..., 0] + 1e-3)) < 0.1 # N, T, VV
+        mask3 = mask3.sum(2) > 0
 
-        mask = np.logical_or(mask, mask1, mask2, mask3)
+        mask = np.logical_or(np.logical_or(mask, mask1), np.logical_or(mask2, mask3))
         return mask
         
         
@@ -114,10 +114,9 @@ class KFoldSkeleton(KFoldInitializer[SkeletonDataset]):
     def set_sets(self, train_indices: np.ndarray, val_indices: np.ndarray, 
             test_indices: np.ndarray) -> Dict[Separation, SkeletonDataset]:
         sets: Dict[Separation, SkeletonDataset] = dict()
-
-        set[Separation.VAL] = SkeletonDataset(self._x[val_indices], self._names[val_indices], 
+        sets[Separation.VAL] = SkeletonDataset(self._x[val_indices], self._names[val_indices], 
             self._label_indices[val_indices], self._mask[val_indices])
-        set[Separation.TEST] = SkeletonDataset(self._x[test_indices], self._names[test_indices], 
+        sets[Separation.TEST] = SkeletonDataset(self._x[test_indices], self._names[test_indices], 
             self._label_indices[test_indices], self._mask[test_indices])
         
         # Train dataset should not have missed frames at all.
@@ -126,12 +125,12 @@ class KFoldSkeleton(KFoldInitializer[SkeletonDataset]):
         new_x = np.zeros_like(x)
         seq_i, frame_i = np.nonzero(train_missed)
         _, counts = np.unique(seq_i, return_counts=True)
-        frame_ii = np.concatenate([np.arange(c)] for c in counts).flatten()
+        frame_ii = np.concatenate([np.arange(c) for c in counts]).flatten()
         new_x[seq_i, frame_ii] = x[seq_i, frame_i]
         
         self._x[train_indices] = pad_empty_frames(new_x)
         self._mask[train_indices] = np.zeros_like(self._mask[train_indices], dtype=np.bool)
-        set[Separation.TRAIN] = SkeletonDataset(self._x[train_indices], self._names[train_indices], 
+        sets[Separation.TRAIN] = SkeletonDataset(self._x[train_indices], self._names[train_indices], 
             self._label_indices[train_indices], mask=self._mask[train_indices])
         
         return sets

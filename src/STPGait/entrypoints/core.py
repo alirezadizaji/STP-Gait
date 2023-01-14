@@ -18,7 +18,7 @@ class MainEntrypoint(ABC):
         self.model.to("cuda:0")
 
         self.kfold: KFoldInitializer = kfold
-        self.optimizer: 'Optimizer' = self.get_optimizer()
+        self.optimizer: 'Optimizer' = self.get_optimizer(Optim.ADAM)
         self.train_loader = self.val_loader = self.test_loader = None
 
     def set_loaders(self) -> None:

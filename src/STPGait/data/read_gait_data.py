@@ -83,15 +83,5 @@ def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl",
     data, labels, names, hard_cases_id = preprocessing(data, labels, names, normalize=normalize, 
         critical_limit=critical_limit, non_critical_limit=non_critical_limit)
 
-    # Find frames whose head is very near to the center of the skeleton 
-    # y_centers = data[..., 8, 1]
-    # y_heads = data[..., 0, 1]
-    # y_toes = (data[..., 19, 1] + data[..., 22, 1]) / 2
-    # upper = y_heads - y_toes
-    # lower = y_centers - y_toes
-    # ratio = (upper - lower) / lower
-    # missed_head = ratio < 0.1                   # N, T
-
     with open(os.path.join(save_dir, filename), 'wb') as f:
-        pickle.dump((data, labels, names, hard_cases_id), f)
-        # pickle.dump((data, labels, names, missed_head, hard_cases_id), f)
+        pickle.dump((data, labels, names, np.array(hard_cases_id)), f)

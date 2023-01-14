@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from torch.utils.data import DataLoader
 
 IN, OUT, C = TypeVar('IN'), TypeVar('OUT'), TypeVar('C')
-class TrainEntrypoint(MainEntrypoint, ABC, Generic[IN], Generic[OUT], Generic[C]):
+class TrainEntrypoint(MainEntrypoint, ABC, Generic[IN, OUT, C]):
 
     def _get_weight_save_path(self, epoch):
         weight_dir_name = 'weights'

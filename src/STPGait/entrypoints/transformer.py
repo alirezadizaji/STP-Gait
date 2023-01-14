@@ -21,7 +21,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, C]):
             K=10,
             init_valK=0,
             init_testK=1,
-            load_dir="../Data/output_1.pkl",
+            load_dir="../../Data/output_1.pkl",
             fillZ_empty=True,
             filterout_unlabeled=False)
         model = SimpleTransformer(apply_loss_in_mask_loc=False)
