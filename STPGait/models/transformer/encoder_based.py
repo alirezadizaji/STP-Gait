@@ -41,27 +41,8 @@ class SimpleTransformer(nn.Module):
 
         self._mse = nn.MSELoss()
     
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        with torch.no_grad():
-            N, T, _, _ = x.size()
-            x = x.reshape(N, T, -1)                             # N, T, V, C -> N, T, L
-            y = x.clone()
-
-            mask = torch.zeros(N, T).bool().to(x.device)
-            if self.training:
-                F = int(self._mask_ratio * T)
-                idx1 = torch.arange(N).repeat(F)
-                idx2 = torch.randint(0, T, size=(N, F)).flatten()
-                mask[idx1, idx2] = True
-            else:
-                # For evaluation, mask only particular frames
-                mask[:, 1::10] = True
-            mask = mask.unsqueeze(2)
-
-            # Just to make shapes OK
-            mask = torch.logical_and(torch.ones_like(x).bool(), mask)
-
-            x[mask] = self._mask_fill_value
+    def forward(self, x: torch.Tensor, mask: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        x[mask] = self._mask_fill_value
 
         x = self.encoder_lin(x)
         x = self.encoder(x)

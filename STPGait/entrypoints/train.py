@@ -14,8 +14,8 @@ from ..enums import Separation
 if TYPE_CHECKING:
     from torch.utils.data import DataLoader
 
-T, U, W = TypeVar('T'), TypeVar('U'), TypeVar('W')
-class TrainEntrypoint(MainEntrypoint, ABC, Generic[T], Generic[U], Generic[W]):
+IN, OUT, C = TypeVar('IN'), TypeVar('OUT'), TypeVar('C')
+class TrainEntrypoint(MainEntrypoint, ABC, Generic[IN], Generic[OUT], Generic[C]):
 
     def _get_weight_save_path(self, epoch):
         weight_dir_name = 'weights'
@@ -24,7 +24,7 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[T], Generic[U], Generic[W]):
         return weight_save_path
 
     @abstractmethod
-    def _model_forwarding(self, data: T):
+    def _model_forwarding(self, data: IN) -> OUT:
         """ forwards the model, using dataloader output
 
         Args:
@@ -37,7 +37,7 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[T], Generic[U], Generic[W]):
         # return x
 
     @abstractmethod
-    def _calc_loss(self, x: U, data: T) -> torch.Tensor:
+    def _calc_loss(self, x: OUT, data: IN) -> torch.Tensor:
         """ It calculates loss
 
         Args:
@@ -63,7 +63,7 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[T], Generic[U], Generic[W]):
         # self._train_start()
 
     @abstractmethod
-    def _train_iter_end(self, iter_num: int, loss: torch.Tensor, x: U, data: T) -> None:
+    def _train_iter_end(self, iter_num: int, loss: torch.Tensor, x: OUT, data: IN) -> None:
         """ Any tasks that should be accomplished at the end of the training iteration.
 
         Args:
@@ -81,7 +81,7 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[T], Generic[U], Generic[W]):
         #     print(f'epoch {self.epoch} iter {iter_num} loss value {np.mean(self.losses)}', flush=True)
 
     @abstractmethod
-    def _eval_iter_end(self, iter_num: int, loss: torch.Tensor, x: U, data: T) -> None:
+    def _eval_iter_end(self, iter_num: int, loss: torch.Tensor, x: OUT, data: IN) -> None:
         """ Any tasks that should be accomplished at the end of the evaluation iteration.
 
         Args:
@@ -99,7 +99,7 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[T], Generic[U], Generic[W]):
         # print(f'epoch {self.epoch} train acc {self.correct/self.total}', flush=True)
 
     @abstractmethod
-    def _eval_epoch_end(self, datasep: Separation) -> W:
+    def _eval_epoch_end(self, datasep: Separation) -> C:
         """ Any tasks that should be accomplished at the end of the evaluation epoch. """
         # acc = self.correct / self.total
         # print(f'epoch{self.epoch} {datasep} acc {acc}', flush=True)
@@ -121,9 +121,9 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[T], Generic[U], Generic[W]):
 
         self._train_start()
         for i, data in enumerate(self.train_loader):
-            data: T = data.to("cuda:0")
+            data: IN = data.to("cuda:0")
 
-            x: U = self._model_forwarding(data)
+            x: OUT = self._model_forwarding(data)
             loss = self._calc_loss(x, data)
 
             loss.backward()
@@ -134,17 +134,17 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[T], Generic[U], Generic[W]):
 
         self._train_epoch_end()
 
-    def _validate_for_one_epoch(self, loader: 'DataLoader') -> W:
+    def _validate_for_one_epoch(self, separation: Separation, loader: 'DataLoader') -> C:
         self.model.eval()
 
         self._eval_start()
         with torch.no_grad():
             for i, data in enumerate(loader):
-                data: T = data.to("cuda:0")
+                data: IN = data.to("cuda:0")
                 x = self._model_forwarding(data)
                 self._eval_iter_end(i, None, x, data)
 
-            return self._eval_epoch_end()            
+            return self._eval_epoch_end(separation)            
 
     def _early_stopping(self, epoch: int, best_epoch: Optional[int]) -> bool:
         thd = 50
@@ -160,7 +160,7 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[T], Generic[U], Generic[W]):
         best_epoch = None
         for self.epoch in tqdm(range(num_epochs)):
             self._train_for_one_epoch()
-            val: W = self._validate_for_one_epoch(self.val_loader) 
+            val: C = self._validate_for_one_epoch(Separation.VAL, self.val_loader) 
             self.val_criterias[self.kfold.valK, self.epoch] = val
             
             # save only best epoch in terms of validation accuracy             
@@ -177,15 +177,15 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[T], Generic[U], Generic[W]):
 
         # evaluate best epoch on test set
         self.model.load_state_dict(torch.load(self._get_weight_save_path(best_epoch), map_location="cuda:0"))
-        test: W =self._validate_for_one_epoch(self.test_loader)
+        test: C =self._validate_for_one_epoch(Separation.TEST, self.test_loader)
         self.test_criterias[self.kfold.testK] = test
-        val: W = self.val_criterias[self.kfold.valK, best_epoch]
+        val: C = self.val_criterias[self.kfold.valK, best_epoch]
         print(f"@@@@@ Best criteria ValK {self.kfold.valK} epoch {best_epoch} @@@@@\nval: {val}, test: {test}", flush=True)
 
 
     def run(self):
-        self.val_criterias: Dict[int, Dict[int, W]] = dict()
-        self.test_criterias: Dict[int, W] = dict()
+        self.val_criterias: Dict[int, Dict[int, C]] = dict()
+        self.test_criterias: Dict[int, C] = dict()
 
         for _ in range(self.kfold.K):
             with self.kfold:

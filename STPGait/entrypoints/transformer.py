@@ -1,3 +1,4 @@
+from typing import Tuple
 from tqdm import tqdm
 
 from dig.xgraph.models import GCN_3l_BN
@@ -7,103 +8,79 @@ import torch
 import torch.nn.functional as F
 from torch.optim import Adam
 
-from ..dataset import DatasetInitializer
-from ..enums import EdgeType
+from ..dataset.KFold.skeleton import KFoldSkeleton
+from ..enums.separation import Separation
+
 from ..models.transformer import SimpleTransformer
-from ..utils import stdout_stderr_setter, timer
+from .train import TrainEntrypoint
 
-def _calc_loss(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-    x = F.log_softmax(x, dim=-1)
-    loss = - torch.mean(x[torch.arange(x.size(0)), y])
-    return loss
+IN = Tuple[torch.Tensor, torch.Tensor, np.ndarray]
+OUT = Tuple[torch.Tensor, torch.Tensor]
+C = float
 
-class Trainer:
+class Entrypoint(TrainEntrypoint[IN, OUT, C]):
     def __init__(self) -> None:
-        self.dataset_initializer = DatasetInitializer("../Data/output_1.pkl", fillZ_empty=True, 
-            filterout_unlabeled=True, K=10, edge_type=EdgeType.INTER_FRAME_M2, use_lower_part=False, I=60, offset=30)
+        kfold = KFoldSkeleton(
+            K=10,
+            init_valK=0,
+            init_testK=1,
+            load_dir="../Data/output_1.pkl",
+            fillZ_empty=True,
+            filterout_unlabeled=True)
+        model = SimpleTransformer(apply_loss_in_mask_loc=False)
 
-    def train(self, train_loader: DataLoader) -> None:
-        self.model.train()
-
-        correct = total = 0
-        total_loss = list()
-
-        for i, data in enumerate(train_loader):
-            data = data[0].to("cuda:0")
-            # Ignore Z dimension
-            data.x = data.x[..., [0, 1]] 
-            datas = data.to_data_list()
-            x = torch.stack([d.x for d in datas])
-            y = torch.stack([d.y for d in datas])
-            x = x.reshape(-1, train_loader.dataset.T, train_loader.dataset.V, x.size(-1))
-
-            x, loss, _ = self.model(x)
-
-            # loss = _calc_loss(x, y)
-            loss.backward()
-            self.optimizer.step()
-            self.optimizer.zero_grad()
-
-            total_loss.append(loss.item())
+        super().__init__(kfold, model)
     
-            y_pred = x.argmax(-1)
-            # correct += torch.sum(y_pred == data.y).item()
-            total += data.y.numel()
-        
-            if i % 20 == 0:
-                print(f'epoch {self.epoch_num} iter {i} loss value {np.mean(total_loss)}', flush=True)
-
-        print(f'epoch {self.epoch_num} train acc {correct/(total + 1e-4)}', flush=True)
-
-
-    def eval(self, loader, val: bool):
-        self.model.eval()
-
-        name = "val" if val else "test"
-        correct = total = 0
+    def _model_forwarding(self, data: IN) -> OUT:
+        x = data[0]
 
         with torch.no_grad():
-            for i, data in enumerate(loader):
-                data = data[0].to("cuda:0")
-                # Ignore Z dimension
-                data.x = data.x[..., [0, 1]]
-                datas = data.to_data_list()
-                x = torch.stack([d.x for d in datas])
-                y = torch.stack([d.y for d in datas])
-                x = x.reshape(-1, loader.dataset.T, loader.dataset.V, x.size(-1))
+            N, T, _, _ = x.size()
+            x = x.reshape(N, T, -1)                             # N, T, V, C -> N, T, L
 
-                x, loss, _ = self.model(x)
-                # x: torch.Tensor = self.model(data.x)
-                
-                y_pred = x.argmax(-1)
-                # correct += torch.sum(y_pred == data.y).item()
-                total += data.y.numel()
+            mask = torch.zeros(N, T).bool().to(x.device)
+            if self.model.training:
+                F = int(self.model._mask_ratio * T)
+                idx1 = torch.arange(N).repeat(F)
+                idx2 = torch.randint(0, T, size=(N, F)).flatten()
+                mask[idx1, idx2] = True
+            else:
+                # For evaluation, mask only particular frames
+                mask[:, 1::10] = True
+            mask = mask.unsqueeze(2)
+
+            # Just to make shapes OK
+            mask = torch.logical_and(torch.ones_like(x).bool(), mask)
         
-            print(f'epoch {self.epoch_num} {name} acc {correct/total} loss {loss.item()}', flush=True)
+        x = self.model(x, mask)
+        return x
 
-    @timer
-    # @stdout_stderr_setter("../Results/4_gcn3l_m2_I_60_offset_30")
-    def run(self):        
-        epochs = 300
+    def _calc_loss(self, x: OUT, data: IN) -> torch.Tensor:
+        loss = x[1]
+        return loss
 
-        for _ in range(self.dataset_initializer.K):
-            # self.model = GCN_3l_BN(model_level='graph', dim_node=2, dim_hidden=60, num_classes=6)
-            self.model = SimpleTransformer(apply_loss_in_mask_loc=True)
-            self.model.to("cuda:0")
-            self.optimizer = Adam(self.model.parameters(), 1e-2)
+    def _train_start(self) -> None:
+        self.losses = list()
 
-            with self.dataset_initializer:
-                train_loader = DataLoader(self.dataset_initializer.train, batch_size=12, shuffle=True)
-                val_loader = DataLoader(self.dataset_initializer.val, batch_size=6)
-                test_loader = DataLoader(self.dataset_initializer.test, batch_size=6)
+    def _eval_start(self) -> None:
+        self._train_start()
 
-                for self.epoch_num in range(epochs):
-                    self.train(train_loader)
-                    self.eval(val_loader, True)
-                
-                self.eval(test_loader, False)
+    def _train_iter_end(self, iter_num: int, loss: torch.Tensor, x: OUT, data: IN) -> None:
+        self.losses.append(loss.item())
 
+        if iter_num % 20 == 0:
+            print(f'epoch {self.epoch} loss value {np.mean(self.losses)}', flush=True)
 
-if __name__ == "__main__":
-    trainer = Trainer()
-    trainer.run()
+    def _eval_iter_end(self, iter_num: int, loss: torch.Tensor, x: OUT, data: IN) -> None:
+        self.losses.append(loss.item())
+
+    def _train_epoch_end(self) -> None:
+        print(f'epoch {self.epoch} loss value {np.mean(self.losses)}', flush=True)
+
+    def _eval_epoch_end(self, datasep: Separation) -> C:
+        print(f'epoch {self.epoch} separation {datasep} loss value {np.mean(self.losses)}', flush=True)
+        return np.mean(self.losses)
+
+    def best_epoch_criteria(self, best_epoch: int) -> bool:
+        val = self.val_criterias[self.kfold.valK, self.epoch]
+        return val <= self.val_criterias[self.kfold.valK, best_epoch]
