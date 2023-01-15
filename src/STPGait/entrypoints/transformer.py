@@ -100,7 +100,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, C]):
                 pred = np.concatenate(self.pred)
                 # N, T, V*C -> N, T, V, C
                 pred = np.stack(np.array_split(pred, self.test_loader.dataset.V, axis=2), axis=2)
-                pickle.dump((np.concatenate(self.pred), None, np.array(self.names), None), f)
+                pickle.dump((np.concatenate(pred), None, np.array(self.names), None), f)
 
         return np.mean(self.losses)
 

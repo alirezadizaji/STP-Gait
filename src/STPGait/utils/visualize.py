@@ -102,22 +102,25 @@ def get_parser():
     args = parser.parse_args()
     return args
 
-@stdout_stderr_setter("./visualize_logs/")
+# @stdout_stderr_setter("./visualize_logs/")
 def run_main():
     import warnings
     warnings.filterwarnings("ignore")
 
     args = get_parser()
 
-    def _read_data(filename: str, critical_limit: int, non_critical_limit: int):
-        save_path = os.path.join(args.save_dir, filename)
+    def _read_data(save_dir: str, filename: str, critical_limit: int, non_critical_limit: int):
+        save_path = os.path.join(save_dir, filename)
         if not os.path.exists(save_path):
-            proc_gait_data(args.load_path, args.save_dir, filename=filename,
+            proc_gait_data(args.load_path, save_dir, filename=filename,
                 critical_limit=critical_limit, non_critical_limit=non_critical_limit)
         
         with open(save_path, "rb") as f:
             import pickle
             data, labels, names, hard_cases_id = pickle.load(f)
+            if data.ndim == 3:
+                data = np.stack(np.array_split(data, 25, axis=2), axis=2)
+                data = np.concatenate((data, np.zeros((*data.shape[:3], 1))), axis=3)
 
             # Fill NaN location same as the center of body
             idx1, idx2, idx3, _ = np.nonzero(np.isnan(data))
@@ -125,8 +128,22 @@ def run_main():
 
         return data, labels, names, hard_cases_id
     
-    raw, labels, names, _ = _read_data("raw_vis.pkl", critical_limit = 0, non_critical_limit = 0)
-    processed, _, _, _ = _read_data("proc_vis.pkl", critical_limit = None, non_critical_limit = None)
+    raw, labels, names1, _ = _read_data(args.save_dir, "raw_vis.pkl", critical_limit = 0, non_critical_limit = 0)
+    processed, _, names2, _ = _read_data("../Results/1_transformer/encoder_based/0/", "output.pkl", critical_limit = None, non_critical_limit = None)
+
+    mask1 = np.zeros(raw.shape[0], dtype=np.bool)
+    mask2 = np.zeros(processed.shape[0], dtype=np.bool)
+
+    for i1, n1 in enumerate(names1):
+        for i2, n2 in enumerate(names2):
+            if n2 == n1:
+                mask1[i1] = True
+                mask2[i2] = True
+                break
+    
+    raw = raw[mask1]
+    processed = processed[mask2]
+    names = names1[mask1]
 
     visualizer = initializer(args.save_vis_dir)
     visualizer(raw, processed, labels, names)
