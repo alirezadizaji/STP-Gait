@@ -30,8 +30,7 @@ class SimpleTransformer(nn.Module):
 
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=d_model,
-            nhead=enc_n_heads, 
-            batch_first=True)        
+            nhead=enc_n_heads)        
         self.encoder = nn.TransformerEncoder(
             encoder_layer=encoder_layer,
             num_layers=n_enc_layers, 
