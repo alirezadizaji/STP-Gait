@@ -23,7 +23,7 @@ class Entrypoint(E, TrainEntrypoint[IN, OUT, float, BaseConfig]):
             config=GraphSkeletonKFoldConfig(
                 kfold_config=KFoldConfig(K=10, init_valK=0, init_testK=1),
                 load_dir="../../Data/output_1.pkl",
-                filterout_unlabeled=False,
+                filterout_unlabeled=True,
                 savename="processed_120c.pkl",
                 proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)))
             )
