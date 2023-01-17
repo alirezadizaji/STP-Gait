@@ -32,7 +32,7 @@ if __name__ == "__main__":
     Constants.GLOBAL_SEED = int(argv[1])
     
     global_seed(Constants.GLOBAL_SEED)
-    script = import_module(f"GNN_Explainability.entrypoints.{argv[2]}")
+    script = import_module(f"STPGait.entrypoints.{argv[2]}")
     entrypoint: 'MainEntrypoint' = getattr(script, 'Entrypoint')()
 
     if entrypoint.conf.save_log_in_file:
