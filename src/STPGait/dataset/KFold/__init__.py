@@ -1,2 +1,2 @@
-from .kfold import KFoldInitializer
-from .skeleton import KFoldSkeleton
+from .kfold import KFoldOperator, KFoldConfig
+from .skeleton import SkeletonKFoldOperator, SkeletonKFoldConfig

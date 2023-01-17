@@ -1,4 +1,5 @@
-from typing import Optional, Tuple
+from dataclasses import dataclass
+from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -6,22 +7,25 @@ from .pad_empty_frames import pad_empty_frames
 from .fill_na_locs import fill_unknown_locs
 from ..context import Skeleton
 
-def preprocessing(data: np.ndarray, labels: np.ndarray, names: np.ndarray, 
-        normalize: bool = False, critical_limit: int = 30, 
-        non_critical_limit: Optional[int] = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+
+@dataclass
+class PreprocessingConfig:
+    normalize: bool = False
+    critical_limit: int = 30
+    non_critical_limit: Optional[int] = None
+
+def preprocessing(data: np.ndarray, config: PreprocessingConfig = PreprocessingConfig())\
+        -> Tuple[np.ndarray, List[int]]:
     """ Preprocesses the skeleton data 
 
     Args:
         data (np.ndarray): shape N, T, V, C
-        remove_hard_cases (bool): If True then remove cases which are hard to processed (Due to having NA locations). _default_: False
-        normalize (bool, optional): If True, then apply gaussian and minmax normalization, O.W. keep it intact. _default_: False
-        critical_limit (int, optional): Number (in frames) of consecutive NaN values permitted to be filled for critical joints. Default to 30.
-        non_critical_limit (int, optional): Number (in frames) of consecutive NaN values permitted to be filled for non critical joints. Default to None: every consecutive is permitted.
+        config (PreprocessingConfig): configuration to run preprocessing with
 
     Returns:
-        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: _description_
+        Tuple[np.ndarray, List[int]]: processed data + IDs of hard samples(=having still NaN locations in their sequence)
     """
-    data, hard_cases_id = fill_unknown_locs(data, critical_limit, non_critical_limit)
+    data, hard_cases_id = fill_unknown_locs(data, config.critical_limit, config.non_critical_limit)
     print(f"@@ (NaN Location): Done @@", flush=True)
 
     # Pad empty frames by replaying non-empty frames
@@ -34,7 +38,7 @@ def preprocessing(data: np.ndarray, labels: np.ndarray, names: np.ndarray,
     # Revert upside-down direction
     data[..., 1] = -data[..., 1]
     
-    if normalize:
+    if config.normalize:
         mask = np.isnan(data)
         data_valid: np.ndarray = data[~mask]
 
@@ -52,4 +56,4 @@ def preprocessing(data: np.ndarray, labels: np.ndarray, names: np.ndarray,
         data[~mask] = data_valid
         print(f"@@ (Normalization): Done @@", flush=True)
 
-    return data, labels, names, hard_cases_id
+    return data, hard_cases_id

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import os
 from typing import Optional
 import pickle
@@ -8,21 +9,23 @@ import pandas as pd
 from ..enums import WalkDirection
 from ..preprocess import preprocessing
 from ..utils import timer
+from ..preprocess.main import PreprocessingConfig
+
+@dataclass
+class ProcessingGaitConfig:
+    fillZ_empty: bool = True
+    preprocessing_conf: PreprocessingConfig = PreprocessingConfig(critical_limit=30)
 
 @timer
 def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl", 
-        fillZ_empty: bool = True, normalize: bool = False, critical_limit: int = 30, 
-        non_critical_limit: Optional[int] = None) -> None:
+        config: ProcessingGaitConfig = ProcessingGaitConfig()) -> None:
     """ Processes Raw gait dataset (CSV file) provided by OpenPose
 
     Args:
         load_dir (str): CSV raw data directory to be loaded. It must all parts of the file directory, including its name too.
         save_dir (str): Where to save the processed file.
         filename (str, optional): Filename to store processed file with. Default to processed.pkl.
-        fillZ_empty (bool, optional): If True, then fill Z dimension as zero, O.W. fill it by processing patient steps information.
-        normalize (bool, optional): If True, then normalize patient locations using gaussian and minimax normalization, O.W. leave it intact.
-        critical_limit (int, optional): Number (in frames) of consecutive NaN values permitted to be filled for critical joints. Default to 30.
-        non_critical_limit (int, optional): Number (in frames) of consecutive NaN values permitted to be filled for non critical joints. Default to None: every consecutive is permitted.
+        config (ProcessingGaitConfig, optional): configuration to process gait data with.
     """
     num_features = 3
     num_nodes = 25
@@ -49,7 +52,7 @@ def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl",
         sample_gait = gait_seq[idx]
 
         sample_z = np.zeros((sample_num_frames, num_nodes))
-        if not fillZ_empty:
+        if not config.fillZ_empty:
             # Seems like the first two steps is when the patient enters to the process :), since it is always NaN
             step_time = np.array(list(sample_gait['STime'].values()))[2:]
             step_len = np.array(list(sample_gait["SLen"].values()))[2:]
@@ -80,8 +83,7 @@ def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl",
     away_idxs = np.nonzero(walk_directions == WalkDirection.AWAY)
     data[away_idxs, ..., 2] = data[away_idxs, ..., 2].max((1, 2)) - data[away_idxs, ..., 2]
     
-    data, labels, names, hard_cases_id = preprocessing(data, labels, names, normalize=normalize, 
-        critical_limit=critical_limit, non_critical_limit=non_critical_limit)
+    data, hard_cases_id = preprocessing(data, config.preprocessing_conf)
 
     with open(os.path.join(save_dir, filename), 'wb') as f:
         pickle.dump((data, labels, names, np.array(hard_cases_id)), f)

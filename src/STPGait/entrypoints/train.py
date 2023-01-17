@@ -8,16 +8,18 @@ import numpy as np
 import torch
 from torch.nn import functional as F
 
+from ..config import BaseConfig
 from .core import MainEntrypoint
 from ..enums import Separation, Optim
 
 if TYPE_CHECKING:
     from torch.utils.data import DataLoader
 
+T = TypeVar('T', bound=BaseConfig)
 IN, OUT, C = TypeVar('IN'), TypeVar('OUT'), TypeVar('C')
-class TrainEntrypoint(MainEntrypoint, ABC, Generic[IN, OUT, C]):
+class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, C, T]):
 
-    def _get_weight_save_path(self, epoch):
+    def _get_weight_save_path(self, epoch: int) -> str:
         weight_dir_name = 'weights'
         weight_save_path =  os.path.join("../Results/1_transformer", weight_dir_name, f"{self.kfold.valK}-{self.kfold.testK}", str(epoch))
         os.makedirs(os.path.dirname(weight_save_path), exist_ok=True)
@@ -146,8 +148,7 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[IN, OUT, C]):
 
             return self._eval_epoch_end(separation)            
 
-    def _early_stopping(self, best_epoch: Optional[int]) -> bool:
-        thd = 50
+    def _early_stopping(self, best_epoch: Optional[int], thd: int = 50) -> bool:
         best = best_epoch if best_epoch is not None else 0
         difference = self.epoch - best
         if difference >= thd:
@@ -156,7 +157,7 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[IN, OUT, C]):
         return False
     
     def _main(self):
-        num_epochs = 200
+        num_epochs = self.conf.training_config.num_epochs
         best_epoch = None
         for self.epoch in tqdm(range(num_epochs)):
             self._train_for_one_epoch()
@@ -172,12 +173,13 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[IN, OUT, C]):
                 print(f"### Best epoch changed to {best_epoch} criteria {val} ###", flush=True)
 
             # check early stopping if necessary
-            if self._early_stopping(best_epoch):
+            if self.conf.training_config.early_stop is not None \
+                    and self._early_stopping(best_epoch, self.conf.training_config.early_stop):
                 print(f"*** EARLY STOPPING: epoch No. {self.epoch}, best epoch No. {best_epoch} ***", flush=True)
                 break
 
         # evaluate best epoch on test set
-        self.model.load_state_dict(torch.load(self._get_weight_save_path(best_epoch), map_location="cuda:0"))
+        self.model.load_state_dict(torch.load(self._get_weight_save_path(best_epoch), map_location=self.conf.device))
         test: C =self._validate_for_one_epoch(Separation.TEST, self.test_loader)
         self.test_criterias[self.kfold.testK] = test
         val: C = self.val_criterias[self.kfold.valK, best_epoch]
@@ -191,9 +193,9 @@ class TrainEntrypoint(MainEntrypoint, ABC, Generic[IN, OUT, C]):
         for _ in range(self.kfold.K):
             with self.kfold:
                 self.model = self.get_model()
-                self.model.to("cuda:0")
+                self.model.to(self.conf.device)
                 self.set_loaders()
-                self.set_optimizer(Optim.ADAM)
+                self.set_optimizer(self.conf.training_config.optim_type)
                 self._main()
         
         print(f"@@@ Final Result on {self.kfold.K} KFold operation on test set: {np.mean(list(self.test_criterias.values()))} @@@", flush=True)

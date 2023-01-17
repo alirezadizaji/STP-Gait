@@ -1,47 +1,49 @@
+from dataclasses import dataclass
 import os
 from typing import Dict
 
 import numpy as np
 
-from .kfold import KFoldInitializer
+from .kfold import KFoldOperator, KFoldConfig
 from ...data import proc_gait_data
 from ..skeleton import SkeletonDataset
 from ...enums import Separation
 from ...context import Skeleton
 from ...preprocess.pad_empty_frames import pad_empty_frames
+from ...data.read_gait_data import ProcessingGaitConfig
 
-class KFoldSkeleton(KFoldInitializer[SkeletonDataset]):
+@dataclass
+class SkeletonKFoldConfig:
+    kfold_config: KFoldConfig
+    load_dir: str
+    savename: str = "processed.pkl",
+    proc_conf: ProcessingGaitConfig = ProcessingGaitConfig(),
+    filterout_unlabeled: bool = True
+
+class SkeletonKFoldOperator(KFoldOperator[SkeletonDataset]):
     r""" KFold for Skeleton Dataset
 
     Args:
-        load_dir (str): Where to load raw gait data; pickle format
-        fillZ_empty (bool, optional): If `True`, then fill Z with zero value, O.W. process patient steps to get approximate Z locations. Defaults to `True`.
-        filterout_unlabeled (bool, optional): If `True`, then filter out cases labeled as `unlabeled`. Defaults to `True`.
+        config (KFoldSkeletonConfig, optional): Configuration for the Skeleton KFold operator
     NOTE:
         Each validation and test sets will get 1/K partial of the whole dataset.
 
     Returns:
         Tuple[Dataset, Dataset, Dataset]: train/test/validation SkeletonDataset instances.
     """
-    def __init__(self, 
-            K: int,
-            init_valK: int,
-            init_testK: int,
-            load_dir: str,
-            fillZ_empty: bool = True,
-            filterout_unlabeled: bool = True) -> None:
+    def __init__(self, config: SkeletonKFoldConfig = SkeletonKFoldConfig()) -> None:
 
-        root_dir = os.path.dirname(load_dir)
-        filename = "processed.pkl"
-        save_dir = os.path.join(root_dir, filename)
+        assert os.path.isfile(config.load_dir), f"The given directory ({config.load_dir}) should determine a file path (CSV); got directory instead."
+        root_dir = os.path.dirname(config.load_dir)
+        save_dir = os.path.join(root_dir, config.savename)
         if not os.path.exists(save_dir):
-            proc_gait_data(load_dir, root_dir, filename, fillZ_empty)
+            proc_gait_data(config.load_dir, root_dir, config.savename, config.proc_conf)
         
         with open(save_dir, "rb") as f:
             import pickle
             x, labels, names, hard_cases_id = pickle.load(f)
         
-        if filterout_unlabeled:
+        if config.filterout_unlabeled:
             mask = labels != 'unlabeled'
             x = x[mask]
             labels = labels[mask]
@@ -57,7 +59,7 @@ class KFoldSkeleton(KFoldInitializer[SkeletonDataset]):
         self._hard_cases_id = hard_cases_id
         self._mask = self._generate_missed_frames()
 
-        super().__init__(K, init_valK, init_testK)
+        super().__init__(config.kfold_config.K, config.kfold_config.init_valK, config.kfold_config.init_testK)
 
     def _generate_missed_frames(self) -> np.ndarray:
         """ It generates a mask, determining whether a frame is missed or not. It verifies

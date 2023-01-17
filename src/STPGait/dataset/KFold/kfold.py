@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Dict, Generic, List, Tuple, TypeVar
 
 import numpy as np
@@ -8,7 +9,13 @@ from ...enums import Separation
 
 T = TypeVar('T', bound=Dataset)
 
-class KFoldInitializer(ABC, Generic[T]):
+@dataclass
+class KFoldConfig:
+    K: int = 10
+    init_valK: int = 0
+    init_testK: int = 1
+
+class KFoldOperator(ABC, Generic[T]):
     r""" It initializes the train/test/validation sets, using KFold strategy.
 
     Args:

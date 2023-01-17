@@ -5,8 +5,9 @@ import pickle
 import numpy as np
 import torch
 
-from ..dataset.KFold.skeleton import KFoldSkeleton
-from ..enums.separation import Separation
+from ..config import BaseConfig, TrainingConfig
+from ..dataset.KFold import SkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
+from ..enums import Optim, Separation
 
 from ..models.transformer import SimpleTransformer
 from .train import TrainEntrypoint
@@ -15,17 +16,23 @@ IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, np.ndarray]
 OUT = Tuple[torch.Tensor, torch.Tensor]
 C = float
 
-class Entrypoint(TrainEntrypoint[IN, OUT, C]):
+class Entrypoint(TrainEntrypoint[IN, OUT, C, BaseConfig]):
     def __init__(self) -> None:
-        kfold = KFoldSkeleton(
-            K=10,
-            init_valK=0,
-            init_testK=1,
-            load_dir="../../Data/output_1.pkl",
-            fillZ_empty=True,
-            filterout_unlabeled=False)
-
-        super().__init__(kfold)
+        kfold = SkeletonKFoldOperator(
+            config=SkeletonKFoldConfig(
+                kfold_config=KFoldConfig(K=10, init_valK=0, init_testK=1),
+                load_dir="../../Data/output_1.pkl",
+                filterout_unlabeled=False)
+            )
+        config = BaseConfig(
+            try_num=1,
+            try_name="transformer",
+            device="cuda:0",
+            eval_batch_size=1,
+            save_log_in_file=True,
+            training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
+        )
+        super().__init__(kfold, config)
     
     def get_model(self):
         model = SimpleTransformer(apply_loss_in_mask_loc=False)
@@ -52,7 +59,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, C]):
             # Just to make shapes OK
             mask = torch.logical_and(torch.ones_like(x).bool(), mask)
         
-        x = self.model(x.to("cuda:0"), mask.to("cuda:0"))
+        x = self.model(x.to(self.conf.device), mask.to(self.conf.device))
         return x
 
     def _calc_loss(self, x: OUT, data: IN) -> torch.Tensor:
@@ -94,7 +101,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, C]):
 
         # SAVE TEST outputs
         if datasep == Separation.TEST:
-            save_dir = f"../Results/1_transformer/encoder_based/{self.kfold.testK}/output.pkl"
+            save_dir = os.path.join(self.conf.save_dir, "encoder_based", str(self.kfold.testK), "output.pkl")
             os.makedirs(os.path.dirname(save_dir), exist_ok=True)
             with open(save_dir, 'wb') as f:
                 pred = np.concatenate(self.pred)
