@@ -20,8 +20,7 @@ IN, OUT, C = TypeVar('IN'), TypeVar('OUT'), TypeVar('C')
 class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, C, T]):
 
     def _get_weight_save_path(self, epoch: int) -> str:
-        weight_dir_name = 'weights'
-        weight_save_path =  os.path.join("../Results/1_transformer", weight_dir_name, f"{self.kfold.valK}-{self.kfold.testK}", str(epoch))
+        weight_save_path =  os.path.join(self.conf.save_dir, "weights", f"{self.kfold.valK}-{self.kfold.testK}", str(epoch))
         os.makedirs(os.path.dirname(weight_save_path), exist_ok=True)
         return weight_save_path
 

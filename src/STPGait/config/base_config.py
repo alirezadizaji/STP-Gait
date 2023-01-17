@@ -30,7 +30,7 @@ class BaseConfig:
     def save_dir(self):
         """ the root location in which log files, visualization outputs and model weights are saved """
         
-        folder_name = "_".join([str(self.try_num), self.try_name, self.dataset_name])
+        folder_name = "_".join([str(self.try_num), self.try_name])
         root = "../results"
         return os.path.join(root, folder_name)
 

@@ -16,7 +16,7 @@ from ...data.read_gait_data import ProcessingGaitConfig
 class SkeletonKFoldConfig:
     kfold_config: KFoldConfig
     load_dir: str
-    savename: str = "processed.pkl",
+    savename: str = "processed.pkl"
     proc_conf: ProcessingGaitConfig = ProcessingGaitConfig(),
     filterout_unlabeled: bool = True
 
