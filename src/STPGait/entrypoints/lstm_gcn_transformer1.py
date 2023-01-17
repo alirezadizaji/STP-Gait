@@ -14,11 +14,12 @@ from ..enums import Optim, Separation
 from ..models import GCNLSTMTransformer
 from ..preprocess.main import PreprocessingConfig
 from .train import TrainEntrypoint
+from .transformer import Entrypoint as E
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
-class Entrypoint(TrainEntrypoint[IN, OUT, float, BaseConfig]):
+class Entrypoint(E, TrainEntrypoint[IN, OUT, float, BaseConfig]):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(
             config=GraphSkeletonKFoldConfig(
@@ -61,6 +62,6 @@ class Entrypoint(TrainEntrypoint[IN, OUT, float, BaseConfig]):
         if ~np.isnan(loss.item()):
             self.losses.append(loss.item())
 
-    def _eval_epoch_end(self, datasep: Separation) -> C:
+    def _eval_epoch_end(self, datasep: Separation):
         print(f'epoch {self.epoch} separation {datasep} loss value {np.mean(self.losses)}', flush=True)
         return np.mean(self.losses)

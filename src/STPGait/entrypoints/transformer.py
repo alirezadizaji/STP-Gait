@@ -15,7 +15,6 @@ from .train import TrainEntrypoint
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, np.ndarray]
 OUT = Tuple[torch.Tensor, torch.Tensor]
-C = float
 
 class Entrypoint(TrainEntrypoint[IN, OUT, float, BaseConfig]):
     def __init__(self) -> None:
@@ -97,7 +96,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, float, BaseConfig]):
     def _train_epoch_end(self) -> None:
         print(f'epoch {self.epoch} loss value {np.mean(self.losses)}', flush=True)
 
-    def _eval_epoch_end(self, datasep: Separation) -> C:
+    def _eval_epoch_end(self, datasep: Separation):
         print(f'epoch {self.epoch} separation {datasep} loss value {np.mean(self.losses)}', flush=True)
 
         # SAVE TEST outputs
