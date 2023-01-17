@@ -7,6 +7,7 @@ import torch
 
 from ..config import BaseConfig, TrainingConfig
 from ..dataset.KFold import SkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
+from ..dataset.skeleton import SkeletonDataset
 from ..enums import Optim, Separation
 
 from ..models.transformer import SimpleTransformer
@@ -16,9 +17,9 @@ IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, np.ndarray]
 OUT = Tuple[torch.Tensor, torch.Tensor]
 C = float
 
-class Entrypoint(TrainEntrypoint[IN, OUT, C, BaseConfig]):
+class Entrypoint(TrainEntrypoint[IN, OUT, float, BaseConfig]):
     def __init__(self) -> None:
-        kfold = SkeletonKFoldOperator(
+        kfold = SkeletonKFoldOperator[SkeletonDataset, SkeletonKFoldConfig](
             config=SkeletonKFoldConfig(
                 kfold_config=KFoldConfig(K=10, init_valK=0, init_testK=1),
                 load_dir="../../Data/output_1.pkl",

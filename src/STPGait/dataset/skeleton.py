@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 import torch
@@ -9,11 +9,13 @@ class SkeletonDataset(Dataset):
             X: np.ndarray,
             names: np.ndarray,
             Y: np.ndarray,
-            mask: np.ndarray) -> None:
+            mask: Optional[np.ndarray] = None) -> None:
 
         super().__init__()
         self.X: torch.Tensor = torch.from_numpy(X).float()      # N, T, V, C
         self.Y: torch.Tensor = torch.from_numpy(Y)              # N
+        if mask is None:
+            mask = np.zeros((self.X.size(0), self.X.size(1)), dtype=np.bool)
         self.mask: torch.Tensor = torch.from_numpy(mask)        # N, T
         self.names = names                                      # N
 

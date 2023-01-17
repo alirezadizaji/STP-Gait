@@ -40,7 +40,7 @@ class GCNLayer(nn.Module):
     def forward(self, x) -> torch.Tensor:
         return self.relu(self.conv(self.bn(x)))
 
-class GNNLSTMTransformer(nn.Module):
+class GCNLSTMTransformer(nn.Module):
     def __init__(self,
             n: int = 2,
             lstm_conf: LSTMConfig = LSTMConfig(), 

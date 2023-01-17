@@ -32,8 +32,9 @@ if __name__ == "__main__":
     Constants.GLOBAL_SEED = int(argv[1])
     
     global_seed(Constants.GLOBAL_SEED)
-    script = import_module(f"STPGait.entrypoints.transformer")
+    script = import_module(argv[2])
     entrypoint: 'MainEntrypoint' = getattr(script, 'Entrypoint')()
 
-    run_main = stdout_stderr_setter("../Results/1_transformer/")(run_main)
+    if entrypoint.conf.save_log_in_file:
+        run_main = stdout_stderr_setter(entrypoint.conf.save_dir)(run_main)
     run_main(entrypoint)

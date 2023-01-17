@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 import os
-from typing import Dict
+from typing import Dict, Generic, TypeVar
 
 import numpy as np
 
-from .kfold import KFoldOperator, KFoldConfig
+from .core import KFoldOperator, KFoldConfig
 from ...data import proc_gait_data
 from ..skeleton import SkeletonDataset
 from ...enums import Separation
@@ -20,7 +20,9 @@ class SkeletonKFoldConfig:
     proc_conf: ProcessingGaitConfig = ProcessingGaitConfig(),
     filterout_unlabeled: bool = True
 
-class SkeletonKFoldOperator(KFoldOperator[SkeletonDataset]):
+TT = TypeVar('TT', bound=SkeletonDataset)
+C = TypeVar('C', bound=SkeletonKFoldConfig)
+class SkeletonKFoldOperator(KFoldOperator[TT], Generic[TT, C]):
     r""" KFold for Skeleton Dataset
 
     Args:
@@ -31,19 +33,19 @@ class SkeletonKFoldOperator(KFoldOperator[SkeletonDataset]):
     Returns:
         Tuple[Dataset, Dataset, Dataset]: train/test/validation SkeletonDataset instances.
     """
-    def __init__(self, config: SkeletonKFoldConfig = SkeletonKFoldConfig()) -> None:
-
-        assert os.path.isfile(config.load_dir), f"The given directory ({config.load_dir}) should determine a file path (CSV); got directory instead."
-        root_dir = os.path.dirname(config.load_dir)
-        save_dir = os.path.join(root_dir, config.savename)
+    def __init__(self, config: C) -> None:
+        self.conf: C = config
+        assert os.path.isfile(self.conf.load_dir), f"The given directory ({self.conf.load_dir}) should determine a file path (CSV); got directory instead."
+        root_dir = os.path.dirname(self.conf.load_dir)
+        save_dir = os.path.join(root_dir, self.conf.savename)
         if not os.path.exists(save_dir):
-            proc_gait_data(config.load_dir, root_dir, config.savename, config.proc_conf)
+            proc_gait_data(self.conf.load_dir, root_dir, self.conf.savename, self.conf.proc_conf)
         
         with open(save_dir, "rb") as f:
             import pickle
             x, labels, names, hard_cases_id = pickle.load(f)
         
-        if config.filterout_unlabeled:
+        if self.conf.filterout_unlabeled:
             mask = labels != 'unlabeled'
             x = x[mask]
             labels = labels[mask]
@@ -59,7 +61,7 @@ class SkeletonKFoldOperator(KFoldOperator[SkeletonDataset]):
         self._hard_cases_id = hard_cases_id
         self._mask = self._generate_missed_frames()
 
-        super().__init__(config.kfold_config.K, config.kfold_config.init_valK, config.kfold_config.init_testK)
+        super().__init__(self.conf.kfold_config.K, self.conf.kfold_config.init_valK, self.conf.kfold_config.init_testK)
 
     def _generate_missed_frames(self) -> np.ndarray:
         """ It generates a mask, determining whether a frame is missed or not. It verifies
@@ -132,8 +134,7 @@ class SkeletonKFoldOperator(KFoldOperator[SkeletonDataset]):
         new_x[seq_i, frame_ii] = x[seq_i, frame_i]
         
         self._x[train_indices] = pad_empty_frames(new_x)
-        self._mask[train_indices] = np.zeros_like(self._mask[train_indices], dtype=np.bool)
         sets[Separation.TRAIN] = SkeletonDataset(self._x[train_indices], self._names[train_indices], 
-            self._label_indices[train_indices], mask=self._mask[train_indices])
+                self._label_indices[train_indices])
         
         return sets

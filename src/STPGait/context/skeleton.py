@@ -55,6 +55,7 @@ class Skeleton:
 
     @staticmethod
     def get_vanilla_edges(T: int, use_lower_part: bool = False):
+        """ Please checkout documentation of `replicate_edge_index_in_frames` function. """
         edge_index = Skeleton.self_loop_edges
         if use_lower_part:
             edge_index = Skeleton.lower_part_edges(edge_index)
@@ -66,6 +67,8 @@ class Skeleton:
 
     @staticmethod
     def get_simple_interframe_edges(T: int, dilation: int = 30, use_lower_part: bool = False) -> torch.Tensor:
+        r""" Please checkout documentation of `generate_inter_frames_edge_index_mode1` function. """
+        
         edge_index, V = Skeleton.get_vanilla_edges(T, use_lower_part)
         
         inter_frame_edges = generate_inter_frames_edge_index_mode1(T, V, dilation)
@@ -76,6 +79,8 @@ class Skeleton:
     @staticmethod
     def get_interframe_edges_mode2(T: int, I: int = 30, offset: Optional[int] = None, 
             use_lower_part: bool = False) -> torch.Tensor:
+        r""" Please checkout documentation of `generate_inter_frames_edge_index_mode2` function. """
+        
         edge_index, V = Skeleton.get_vanilla_edges(T, use_lower_part)
 
         inter_frame_edges = generate_inter_frames_edge_index_mode2(T, V, I, offset)
