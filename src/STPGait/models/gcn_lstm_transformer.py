@@ -10,6 +10,7 @@ class LSTMConfig:
     input_size: int = 50
     hidden_size: int = 50
     num_layers: int = 1
+    batch_first: bool = True
 
 @dataclass
 class GCNLayerConfig:
