@@ -5,8 +5,6 @@ import pickle
 import numpy as np
 import torch
 
-
-
 from ..config import BaseConfig, TrainingConfig
 from ..data.read_gait_data import ProcessingGaitConfig
 from ..dataset.KFold import GraphSkeletonKFoldOperator, GraphSkeletonKFoldConfig, KFoldConfig
@@ -37,7 +35,8 @@ class Entrypoint(E, TrainEntrypoint[IN, OUT, float, BaseConfig]):
             save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
-        super().__init__(kfold, config)
+        super(TrainEntrypoint, self).__init__(kfold, config)
+
     
     def get_model(self):
         model = GCNLSTMTransformer()

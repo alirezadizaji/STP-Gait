@@ -7,7 +7,7 @@ import torch
 
 @dataclass
 class LSTMConfig:
-    inp_size: int = 50
+    input_size: int = 50
     hidden_size: int = 50
     num_layers: int = 1
 
@@ -25,9 +25,8 @@ class CNNConf:
 
 @dataclass
 class TransformerEncoderConf:
-    enc_n_heads: int = 8
+    enc_n_heads: int = 5
     n_enc_layers: int = 3
-    norm=None
 
 class GCNLayer(nn.Module):
     def __init__(self, hidden_size: int = 50, dim_node: int = 25):
@@ -52,8 +51,11 @@ class GCNLSTMTransformer(nn.Module):
             ratio_to_apply_loss1: float = 0.2) -> None:
 
         super().__init__()
-
-        self.lstm_conf = lstm_conf
+        cnn_conf = cnn_conf.__dict__
+        gcn_conf = gcn_conf.__dict__
+        transformer_encoder_conf = transformer_encoder_conf.__dict__
+        self.lstm_conf = lstm_conf.__dict__
+        
         self.lstms: nn.ModuleList = nn.ModuleList()
         self.gcns: nn.ModuleList = nn.ModuleList()
         for _ in range(n):
@@ -63,26 +65,26 @@ class GCNLSTMTransformer(nn.Module):
         self.ratio_to_apply_loss1: float = ratio_to_apply_loss1
         self.fc = nn.Sequential(
             nn.Dropout(0.2),
-            nn.Linear(gcn_conf.hidden_size, gcn_conf.hidden_size)
+            nn.Linear(gcn_conf['hidden_size'], gcn_conf['hidden_size'])
         )
         self.loss1 = loss1
 
         self.conv = nn.Conv1d(**cnn_conf)
 
         encoder_layer = nn.TransformerEncoderLayer(
-            d_model=gcn_conf.hidden_size,
-            nhead=transformer_encoder_conf.enc_n_heads)        
+            d_model=gcn_conf['hidden_size'],
+            nhead=transformer_encoder_conf['enc_n_heads'])        
         self.encoder = nn.TransformerEncoder(
             encoder_layer=encoder_layer,
-            num_layers=transformer_encoder_conf.n_enc_layers, 
+            num_layers=transformer_encoder_conf['n_enc_layers'], 
             norm=None)
 
         self.pool = nn.AdaptiveAvgPool1d((1,))
         self.fc = nn.Sequential(
             nn.Dropout(0.2),
-            nn.Linear(gcn_conf.hidden_size, gcn_conf.hidden_size),
+            nn.Linear(gcn_conf['hidden_size'], gcn_conf['hidden_size']),
             nn.ReLU(),
-            nn.Linear(gcn_conf.hidden_size, gcn_conf.hidden_size),
+            nn.Linear(gcn_conf['hidden_size'], gcn_conf['hidden_size']),
             nn.Softmax(dim=1),
         )
 
