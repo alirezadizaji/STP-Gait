@@ -5,6 +5,8 @@ from dig.xgraph.models.models import GCNConv
 from torch import nn
 import torch
 
+from ..context import Skeleton
+
 @dataclass
 class LSTMConfig:
     input_size: int = 50
@@ -45,10 +47,10 @@ class GCNLayer(nn.Module):
         x = x.reshape(N, T, V, 2)
         x = x.reshape(N*T*V, 2)
 
-        x = self.conv(x, edge_index=edge_index[0])
+        x = self.conv(x, edge_index=edge_index)
         x = self.bn(x)
         x = self.relu(x)
-        x = self.conv2(x, edge_index=edge_index[0])
+        x = self.conv2(x, edge_index=edge_index)
         
         x = x.reshape(N, T, V, 2)
         x = x.reshape(N, T, L)
@@ -73,6 +75,8 @@ class GCNLSTMTransformer(nn.Module):
         transformer_encoder_conf = transformer_encoder_conf.__dict__
         self.lstm_conf = lstm_conf.__dict__
         
+        self.edge_index = None
+
         self.lstms: nn.ModuleList = nn.ModuleList()
         self.gcns: nn.ModuleList = nn.ModuleList()
         for _ in range(n):
@@ -108,7 +112,7 @@ class GCNLSTMTransformer(nn.Module):
 
         self.loss2 = loss2
 
-    def forward(self, x: torch.Tensor, y: torch.Tensor, edge_index: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor, y: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Args:
             x (torch.Tensor): N, T, F
@@ -116,13 +120,17 @@ class GCNLSTMTransformer(nn.Module):
         Returns:
             Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: prediction, loss1 (unsupervised), loss2 (supervised)
         """
+
+        if self.edge_index is None:
+            self.edge_index = Skeleton.get_interframe_edges_mode2(x.size(1), I=30, offset=20)
+
         x1 = x.clone()       
         for gcn, lstm in zip(self.gcns, self.lstms):
             h0 = torch.randn(self.lstm_conf["num_layers"], x.size(0), self.lstm_conf["hidden_size"]).to(x1.device)
             c0 = torch.randn(self.lstm_conf["num_layers"], x.size(0), self.lstm_conf["hidden_size"]).to(x1.device)
 
             x1, (_, _) = lstm(x1, (h0, c0)) 
-            x1 = gcn(x=x1, edge_index=edge_index)
+            x1 = gcn(x=x1, edge_index=self.edge_index)
 
         # Unsupervised loss
         x_b1 = self.fc(x1)

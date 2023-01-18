@@ -17,7 +17,8 @@ class SkeletonKFoldConfig:
     kfold_config: KFoldConfig
     load_dir: str
     savename: str = "processed.pkl"
-    proc_conf: ProcessingGaitConfig = ProcessingGaitConfig(),
+    proc_conf: ProcessingGaitConfig = ProcessingGaitConfig()
+    filterout_hardcases: bool = False
     filterout_unlabeled: bool = True
 
 TT = TypeVar('TT', bound=SkeletonDataset)
@@ -45,11 +46,20 @@ class SkeletonKFoldOperator(KFoldOperator[TT], Generic[TT, C]):
             import pickle
             x, labels, names, hard_cases_id = pickle.load(f)
         
-        if self.conf.filterout_unlabeled:
-            mask = labels != 'unlabeled'
+        def _masking(x, labels, names, mask):
             x = x[mask]
             labels = labels[mask]
             names = names[mask]
+            return x, labels, names
+
+        if self.conf.filterout_hardcases:
+            mask = np.ones(x.shape[0], dtype=np.bool)
+            mask[hard_cases_id] = False
+            x, labels, names = _masking(x, labels, names, mask)
+
+        if self.conf.filterout_unlabeled:
+            mask = labels != 'unlabeled'
+            x, labels, names = _masking(x, labels, names, mask)
         
         # Shuffle dataset
         indices = np.arange(labels.size)

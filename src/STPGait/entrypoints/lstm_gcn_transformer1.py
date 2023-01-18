@@ -42,9 +42,9 @@ class Entrypoint(TrainEntrypoint[IN, OUT, float, BaseConfig]):
         return model
         
     def _model_forwarding(self, data: IN) -> OUT:
-        x, y, edge_index = data
+        x, y = data
         x = x[..., [0, 1]].flatten(2)
-        x = self.model(x.to(self.conf.device), y.to(self.conf.device), edge_index.to(self.conf.device))
+        x = self.model(x.to(self.conf.device), y.to(self.conf.device))
         return x
 
     def _calc_loss(self, x: OUT, data: IN) -> torch.Tensor:
