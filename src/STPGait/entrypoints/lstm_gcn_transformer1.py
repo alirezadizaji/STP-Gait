@@ -12,12 +12,11 @@ from ..enums import Optim, Separation
 from ..models import GCNLSTMTransformer
 from ..preprocess.main import PreprocessingConfig
 from .train import TrainEntrypoint
-from .transformer import Entrypoint as E
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
-class Entrypoint(E, TrainEntrypoint[IN, OUT, float, BaseConfig]):
+class Entrypoint(TrainEntrypoint[IN, OUT, float, BaseConfig]):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(
             config=GraphSkeletonKFoldConfig(
@@ -30,12 +29,12 @@ class Entrypoint(E, TrainEntrypoint[IN, OUT, float, BaseConfig]):
         config = BaseConfig(
             try_num=2,
             try_name="lstm_gcn_transformer",
-            device="cuda:0",
+            device="cpu",
             eval_batch_size=1,
             save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
-        super(TrainEntrypoint, self).__init__(kfold, config)
+        super().__init__(kfold, config)
 
     
     def get_model(self):
@@ -44,6 +43,7 @@ class Entrypoint(E, TrainEntrypoint[IN, OUT, float, BaseConfig]):
         
     def _model_forwarding(self, data: IN) -> OUT:
         x, y, edge_index = data
+        x = x[..., [0, 1]].flatten(2)
         x = self.model(x.to(self.conf.device), y.to(self.conf.device), edge_index.to(self.conf.device))
         return x
 
@@ -52,16 +52,45 @@ class Entrypoint(E, TrainEntrypoint[IN, OUT, float, BaseConfig]):
         return 0.2 * loss1 + loss2
 
     def _train_start(self) -> None:
+        self.correct = self.total = 0
         self.losses = list()
 
     def _eval_start(self) -> None:
         self._train_start()
-        self.pred: List[np.ndarray] = list()
+
+    def _train_iter_end(self, iter_num: int, loss: torch.Tensor, x: OUT, data: IN) -> None:
+        self.losses.append(loss.item())
+
+        x_probs = x[0]
+        y_pred = x_probs.argmax(-1)
+        y = data[1]
+        self.correct += torch.sum(y_pred == y).item()
+        self.total += y.numel()
+
+        if iter_num % 20 == 0:
+            print(f'epoch {self.epoch} iter {iter_num} loss value {np.mean(self.losses)}', flush=True)
 
     def _eval_iter_end(self, iter_num: int, separation: Separation, loss: torch.Tensor, x: OUT, data: IN) -> None:
         if ~np.isnan(loss.item()):
             self.losses.append(loss.item())
+        
+        x_probs = x[0]
+        y_pred = x_probs.argmax(-1)
+        y = data[1]
+        self.correct += torch.sum(y_pred == y).item()
+        self.total += y.numel()
 
+    def _train_epoch_end(self):
+        acc = self.correct / self.total
+        print(f'epoch{self.epoch} loss value {np.mean(self.losses)} acc {acc}', flush=True)
+    
     def _eval_epoch_end(self, datasep: Separation):
-        print(f'epoch {self.epoch} separation {datasep} loss value {np.mean(self.losses)}', flush=True)
+        acc = self.correct / self.total
+        print(f'epoch{self.epoch} {datasep} acc {acc}', flush=True)
+
+        print(f'epoch {self.epoch} separation {datasep} loss value {np.mean(self.losses)} acc {acc}', flush=True)
         return np.mean(self.losses)
+
+    def best_epoch_criteria(self, best_epoch: int) -> bool:
+        val = self.val_criterias[self.kfold.valK, self.epoch]
+        return val <= self.val_criterias[self.kfold.valK, best_epoch]

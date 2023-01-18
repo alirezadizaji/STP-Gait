@@ -5,18 +5,15 @@ from typing import Callable, Dict
 import numpy as np
 import torch
 
-from .core import KFoldOperator, KFoldConfig
 from .skeleton import SkeletonKFoldConfig, SkeletonKFoldOperator
-from ...data import proc_gait_data
 from ..graph_skeleton import GraphSkeletonDataset
 from ...enums import Separation
 from ...context import Skeleton
 from ...preprocess.pad_empty_frames import pad_empty_frames
-from ...data.read_gait_data import ProcessingGaitConfig
 
 @dataclass
 class GraphSkeletonKFoldConfig(SkeletonKFoldConfig):
-    get_edge_index: Callable[[int], 'torch.Tensor'] = lambda T: torch.from_numpy(Skeleton.get_interframe_edges_mode2(T, I=30, offset=20))
+    get_edge_index: Callable[[int], 'torch.Tensor'] = lambda T: Skeleton.get_interframe_edges_mode2(T, I=30, offset=20).long()
 
 class GraphSkeletonKFoldOperator(SkeletonKFoldOperator[GraphSkeletonDataset, GraphSkeletonKFoldConfig]):
     r""" KFold for Graph Skeleton Dataset """

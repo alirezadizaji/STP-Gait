@@ -30,4 +30,4 @@ def get_chunk_size(data: np.ndarray, op: Callable[[int], int] = lambda x: x, tak
         chunks = max(1, chunks)
     print(f"@ Data Chunking: Available Memory {mem_bytes}B, Data usage {data_bytes}B, Chunk size {chunks} @", flush=True)
 
-    return chunks    
+    return chunks
