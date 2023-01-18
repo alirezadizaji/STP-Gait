@@ -50,7 +50,6 @@ class SkeletonKFoldOperator(KFoldOperator[TT], Generic[TT, C]):
             x = x[mask]
             labels = labels[mask]
             names = names[mask]
-            hard_cases_id = hard_cases_id[mask]
         
         # Shuffle dataset
         indices = np.arange(labels.size)

@@ -101,8 +101,8 @@ class GCNLSTMTransformer(nn.Module):
         """
         x1 = x.clone()       
         for gcn, lstm in zip(self.gcns, self.lstms):
-            h0 = torch.randn(self.lstm_conf.num_layers, x.size(1), self.lstm_conf.hidden_size)
-            c0 = torch.randn(self.lstm_conf.num_layers, x.size(1), self.lstm_conf.hidden_size)
+            h0 = torch.randn(self.lstm_conf["num_layers"], x.size(1), self.lstm_conf["hidden_size"])
+            c0 = torch.randn(self.lstm_conf["num_layers"], x.size(1), self.lstm_conf["hidden_size"])
             x1, _, _ = lstm(x1, (h0, c0)) 
             x1 = gcn(x=x1, edge_index=edge_index)
 

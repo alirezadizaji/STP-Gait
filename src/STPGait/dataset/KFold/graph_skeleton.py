@@ -16,7 +16,7 @@ from ...data.read_gait_data import ProcessingGaitConfig
 
 @dataclass
 class GraphSkeletonKFoldConfig(SkeletonKFoldConfig):
-    get_edge_index: Callable[[int], 'torch.Tensor'] = lambda T: torch.from_numpy(Skeleton.get_interframe_edges_mode2(T, offset=15))
+    get_edge_index: Callable[[int], 'torch.Tensor'] = lambda T: torch.from_numpy(Skeleton.get_interframe_edges_mode2(T, I=30, offset=20))
 
 class GraphSkeletonKFoldOperator(SkeletonKFoldOperator[GraphSkeletonDataset, GraphSkeletonKFoldConfig]):
     r""" KFold for Graph Skeleton Dataset """

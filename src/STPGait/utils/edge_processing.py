@@ -2,6 +2,8 @@ from typing import Optional
 
 import numpy as np
 
+from .memory_info import get_chunk_size
+
 def remove_duplicate_edges(edge_index: np.ndarray) -> np.ndarray:
     """ It removes duplicate edges from the given graph edges by finding the index of edges 
     having the same source and destination node indices, then it takes the latter edge index
@@ -18,6 +20,9 @@ def remove_duplicate_edges(edge_index: np.ndarray) -> np.ndarray:
     E = src.size
 
     # find the source-destination difference between each two edges
+    chunk = get_chunk_size(src, lambda x: x**2, take_integer=False)
+    if chunk >= 1:
+        print(f"@@@ WARNING (edge_processing, L25): It is possible the subtract operation gets stuck because of huge required memory.", flush=True)
     diff_src = src[:, np.newaxis] - src[np.newaxis, :] # E, E
 
     # find the indices of edges having the same source

@@ -1,14 +1,16 @@
 import psutil
+from typing import Callable
 
 import numpy as np
 
-def get_chunk_size(data: np.ndarray) -> int:
+def get_chunk_size(data: np.ndarray, op: Callable[[int], int] = lambda x: x, take_integer: bool = True) -> int:
     """ It returns chunk size suitable to prevent memory leakage. This is useful when data is huge
     and an operation should be performed into several sub data parts.
 
     Args:
         data (np.ndarray): _description_
-
+        op (Callable[[int], int], optional): operation to apply on data size. Defaults to identity operation.
+        take_integer (bool, optional): If True, then return chunk size as integer, O.W. as float.
     Returns:
         int: Chunk size
     """
@@ -22,9 +24,10 @@ def get_chunk_size(data: np.ndarray) -> int:
     elif data.dtype in [np.float64, np.int64, np.uint64]:
         num_bytes = 8
     
-    data_bytes = data.size * num_bytes
-    chunks = data_bytes / (mem_bytes * 2) # Multiply by two; It is supposed that half of memory should be empty.
-    chunks = max(1, chunks)
+    data_bytes = op(data.size) * num_bytes
+    chunks = data_bytes / mem_bytes
+    if take_integer:
+        chunks = max(1, chunks)
     print(f"@ Data Chunking: Available Memory {mem_bytes}B, Data usage {data_bytes}B, Chunk size {chunks} @", flush=True)
 
     return chunks    
