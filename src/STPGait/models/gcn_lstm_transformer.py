@@ -43,6 +43,7 @@ class GCNLayer(nn.Module):
     
     def forward(self, data: Batch) -> torch.Tensor:
         x, edge_index = data.x, data.edge_index
+
         x = self.conv(x=x, edge_index=edge_index)
         x = self.bn(x)
         x = self.relu(x)
