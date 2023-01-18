@@ -11,11 +11,7 @@ from ...enums import Separation
 from ...context import Skeleton
 from ...preprocess.pad_empty_frames import pad_empty_frames
 
-@dataclass
-class GraphSkeletonKFoldConfig(SkeletonKFoldConfig):
-    get_edge_index: Callable[[int], 'torch.Tensor'] = lambda T: Skeleton.get_interframe_edges_mode2(T, I=30, offset=20).long()
-
-class GraphSkeletonKFoldOperator(SkeletonKFoldOperator[GraphSkeletonDataset, GraphSkeletonKFoldConfig]):
+class GraphSkeletonKFoldOperator(SkeletonKFoldOperator[SkeletonKFoldConfig, SkeletonKFoldConfig]):
     r""" KFold for Graph Skeleton Dataset """
 
     def set_sets(self, train_indices: np.ndarray, val_indices: np.ndarray, 

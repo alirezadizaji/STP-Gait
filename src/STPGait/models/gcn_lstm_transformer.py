@@ -1,8 +1,9 @@
 from dataclasses import dataclass
-from typing import Callable, Tuple
+from typing import Callable, List, Tuple
 
 from dig.xgraph.models.models import GCNConv
 from torch import nn
+from torch_geometric.data import Batch, Data
 import torch
 
 from ..context import Skeleton
@@ -40,20 +41,13 @@ class GCNLayer(nn.Module):
         self.relu = nn.ReLU()
         self.conv2 = GCNConv(hidden_size, dim_node)
     
-    def forward(self, x: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:
-        N, T, L = x.size()
-        # hard code
-        V = L // 2
-        x = x.reshape(N, T, V, 2)
-        x = x.reshape(N*T*V, 2)
-
-        x = self.conv(x, edge_index=edge_index)
+    def forward(self, data: Batch) -> torch.Tensor:
+        x, edge_index = data.x, data.edge_index
+        x = self.conv(x=x, edge_index=edge_index)
         x = self.bn(x)
         x = self.relu(x)
-        x = self.conv2(x, edge_index=edge_index)
-        
-        x = x.reshape(N, T, V, 2)
-        x = x.reshape(N, T, L)
+        x = self.conv2(x=x, edge_index=edge_index)
+
         return x
 
 class GCNLSTMTransformer(nn.Module):
@@ -71,7 +65,7 @@ class GCNLSTMTransformer(nn.Module):
 
         super().__init__()
         cnn_conf = cnn_conf.__dict__
-        gcn_conf = gcn_conf.__dict__
+        self.gcn_conf = gcn_conf.__dict__
         transformer_encoder_conf = transformer_encoder_conf.__dict__
         self.lstm_conf = lstm_conf.__dict__
         
@@ -81,7 +75,7 @@ class GCNLSTMTransformer(nn.Module):
         self.gcns: nn.ModuleList = nn.ModuleList()
         for _ in range(n):
             self.lstms.append(nn.LSTM(**self.lstm_conf))
-            self.gcns.append(GCNLayer(**gcn_conf))
+            self.gcns.append(GCNLayer(**self.gcn_conf))
 
         self.ratio_to_apply_loss1: float = ratio_to_apply_loss1
         self.fc = nn.Sequential(
@@ -115,7 +109,7 @@ class GCNLSTMTransformer(nn.Module):
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Args:
-            x (torch.Tensor): N, T, F
+            x (torch.Tensor): N, T, L
 
         Returns:
             Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: prediction, loss1 (unsupervised), loss2 (supervised)
@@ -130,7 +124,18 @@ class GCNLSTMTransformer(nn.Module):
             c0 = torch.randn(self.lstm_conf["num_layers"], x.size(0), self.lstm_conf["hidden_size"]).to(x1.device)
 
             x1, (_, _) = lstm(x1, (h0, c0)) 
-            x1 = gcn(x=x1, edge_index=self.edge_index)
+            
+            D = self.gcn_conf["dim_node"]
+            N, T, L = x1.size()
+            x1 = x1.reshape(N, T, -1, D)
+            
+            data = Batch.from_data_list([Data(x=x_.reshape(-1, D), edge_index=self.edge_index) for x_ in x1])
+            x1 = gcn(data)
+
+            data.x = x1
+            datas: List[Data] = Batch.to_data_list(data)
+            x1 = torch.stack([d.x for d in datas])
+            x1 = x1.reshape(N, T, -1, D).reshape(N, T, -1)
 
         # Unsupervised loss
         x_b1 = self.fc(x1)

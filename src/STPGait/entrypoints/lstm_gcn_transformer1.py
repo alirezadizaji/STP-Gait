@@ -7,7 +7,7 @@ import torch
 
 from ..config import BaseConfig, TrainingConfig
 from ..data.read_gait_data import ProcessingGaitConfig
-from ..dataset.KFold import GraphSkeletonKFoldOperator, GraphSkeletonKFoldConfig, KFoldConfig
+from ..dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
 from ..enums import Optim, Separation
 from ..models import GCNLSTMTransformer
 from ..preprocess.main import PreprocessingConfig
@@ -19,7 +19,7 @@ OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 class Entrypoint(TrainEntrypoint[IN, OUT, float, BaseConfig]):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(
-            config=GraphSkeletonKFoldConfig(
+            config=SkeletonKFoldConfig(
                 kfold_config=KFoldConfig(K=10, init_valK=0, init_testK=1),
                 load_dir="../../Data/output_1.pkl",
                 filterout_unlabeled=True,
