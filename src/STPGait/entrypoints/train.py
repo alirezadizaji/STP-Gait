@@ -123,6 +123,11 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, C, T]):
 
         self._train_start()
         for i, data in enumerate(self.train_loader):
+            # Switch data device 
+            for i in range(len(data)):
+                if isinstance(data[i], torch.Tensor):
+                    data[i] = data[i].to(self.conf.device)
+
             x: OUT = self._model_forwarding(data)
             loss = self._calc_loss(x, data)
 
@@ -140,6 +145,11 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, C, T]):
         self._eval_start()
         with torch.no_grad():
             for i, data in enumerate(loader):
+                # Switch data device 
+                for i in range(len(data)):
+                    if isinstance(data[i], torch.Tensor):
+                        data[i] = data[i].to(self.conf.device)
+
                 x = self._model_forwarding(data)
                 loss = self._calc_loss(x, data)
 
