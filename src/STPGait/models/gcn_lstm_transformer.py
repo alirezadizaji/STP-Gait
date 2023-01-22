@@ -163,13 +163,16 @@ class GCNLSTMTransformer(nn.Module):
             c0 = c0.to(x1.device)
 
             x1, (h, c) = lstm(x1, (h0, c0)) 
-            self._update_lstm_hidden_state(idx, h, c)
+            self._update_lstm_hidden_state(idx, h.detach(), c.detach())
 
             D = self.gcn_conf["dim_node"]
             N, T, _ = x1.size()
             x1 = x1.reshape(N, T, -1, D)
             
-            data = Batch.from_data_list([Data(x=x_.reshape(-1, D), edge_index=self.edge_index, edge_attr=self._calc_edge_attr(xv_)) for x_, xv_ in zip(x1, x_valid)])
+            if x_valid is not None:
+                data = Batch.from_data_list([Data(x=x_.reshape(-1, D), edge_index=self.edge_index, edge_attr=self._calc_edge_attr(xv_)) for x_, xv_ in zip(x1, x_valid)])
+            else:
+                data = Batch.from_data_list([Data(x=x_.reshape(-1, D), edge_index=self.edge_index) for x_ in x1])
             x1 = gcn(data)
 
             data.x = x1
