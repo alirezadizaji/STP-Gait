@@ -1,6 +1,7 @@
 from typing import Tuple
 
 import torch
+from torch.utils.data import DataLoader
 
 from ..config import BaseConfig, TrainingConfig
 from ..context import Skeleton
@@ -33,7 +34,7 @@ class Entrypoint(E):
             try_num=3,
             try_name="lstm_gcn_transformer",
             device="cuda:0",
-            eval_batch_size=1,
+            eval_batch_size=32,
             save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
@@ -43,3 +44,8 @@ class Entrypoint(E):
     def get_model(self):
         model = GCNLSTMTransformerV2(get_gcn_edges= lambda T: torch.from_numpy(Skeleton.get_vanilla_edges(T)[0]))
         return model
+
+    def set_loaders(self) -> None:
+        self.train_loader = DataLoader(self.kfold.train, batch_size=self.conf.training_config.batch_size, shuffle=self.conf.training_config.shuffle_training, drop_last=True)
+        self.val_loader = DataLoader(self.kfold.val, batch_size=self.conf.eval_batch_size, drop_last=True)
+        self.test_loader = DataLoader(self.kfold.test, batch_size=self.conf.eval_batch_size, drop_last=True)
