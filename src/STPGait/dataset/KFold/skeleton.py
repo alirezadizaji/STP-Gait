@@ -46,21 +46,33 @@ class SkeletonKFoldOperator(KFoldOperator[TT], Generic[TT, C]):
             import pickle
             x, labels, names, hard_cases_id = pickle.load(f)
         
+        print(f"### SkeletonKFoldOperator (raw data info): x shape {x.shape} ###", flush=True)
+        
         def _masking(x, labels, names, mask):
             x = x[mask]
             labels = labels[mask]
             names = names[mask]
             return x, labels, names
 
+        values, counts = np.unique(labels, return_counts=True)
+        v_to_c = {v: c for v, c in zip(values, counts)}
+        print(f"### Labels counts (before pruning): {v_to_c} ###", flush=True)
+
         if self.conf.filterout_hardcases:
             mask = np.ones(x.shape[0], dtype=np.bool)
             mask[hard_cases_id] = False
             x, labels, names = _masking(x, labels, names, mask)
+            print(f"### SkeletonKFoldOperator (Filtering hard cases): x shape {x.shape} ###", flush=True)
 
         if self.conf.filterout_unlabeled:
             mask = labels != 'unlabeled'
             x, labels, names = _masking(x, labels, names, mask)
+            print(f"### SkeletonKFoldOperator (Filtering unlabeled samples): x shape {x.shape} ###", flush=True)
         
+        values, counts = np.unique(labels, return_counts=True)
+        v_to_c = {v: c for v, c in zip(values, counts)}
+        print(f"### Labels counts (after pruning): {v_to_c} ###", flush=True)
+
         # Shuffle dataset
         indices = np.arange(labels.size)
         np.random.shuffle(indices)
