@@ -16,6 +16,11 @@ from .train import TrainEntrypoint
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
+# I1: LSTM_GCN_Transformer run
+## K=10, Having Test set too
+## Temporal edge exists between nodes during GCN forwarding
+## LSTM state updated randomly before forwarding
+## LSTMS have independent initial states
 class Entrypoint(TrainEntrypoint[IN, OUT, float, BaseConfig]):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(
@@ -29,7 +34,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, float, BaseConfig]):
         config = BaseConfig(
             try_num=2,
             try_name="lstm_gcn_transformer",
-            device="cpu",
+            device="cuda:0",
             eval_batch_size=1,
             save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
@@ -89,8 +94,8 @@ class Entrypoint(TrainEntrypoint[IN, OUT, float, BaseConfig]):
         print(f'epoch{self.epoch} {datasep} acc {acc}', flush=True)
 
         print(f'epoch {self.epoch} separation {datasep} loss value {np.mean(self.losses)} acc {acc}', flush=True)
-        return np.mean(self.losses)
+        return acc
 
     def best_epoch_criteria(self, best_epoch: int) -> bool:
         val = self.val_criterias[self.kfold.valK, self.epoch]
-        return val <= self.val_criterias[self.kfold.valK, best_epoch]
+        return val > self.val_criterias[self.kfold.valK, best_epoch]

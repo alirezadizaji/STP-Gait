@@ -1,1 +1,2 @@
 from .gcn_lstm_transformer import GCNLSTMTransformer
+from .gcn_lstm_transformer_v2 import GCNLSTMTransformerV2

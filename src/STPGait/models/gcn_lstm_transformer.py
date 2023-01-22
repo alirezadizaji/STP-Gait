@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Callable, List, Tuple
+from typing_extensions import Protocol
 
 from dig.xgraph.models.models import GCNConv
 from torch import nn
@@ -51,6 +52,10 @@ class GCNLayer(nn.Module):
 
         return x
 
+class Protocol1(Protocol):
+    def __call__(self, num_layers: int, batch_size: int, hidden_size: int) -> torch.Tensor:
+        ...
+
 class GCNLSTMTransformer(nn.Module):
     def __init__(self,
             num_classes: int = 6,
@@ -62,7 +67,9 @@ class GCNLSTMTransformer(nn.Module):
             transformer_encoder_conf: TransformerEncoderConf = TransformerEncoderConf(),
             loss1: Callable[..., torch.Tensor] = lambda x, y: nn.MSELoss()(x, y),
             loss2: Callable[..., torch.Tensor] = lambda x, y: - torch.mean(x[torch.arange(x.size(0)), y]),
-            ratio_to_apply_loss1: float = 0.2) -> None:
+            ratio_to_apply_loss1: float = 0.2,
+            get_gcn_edges: Callable[[int], torch.Tensor] = lambda T: Skeleton.get_interframe_edges_mode2(T, I=30, offset=20),
+            init_lstm_hidden_state: Protocol1 = lambda lstm_num_layer, batch_size, hidden_size: torch.randn(lstm_num_layer, batch_size, hidden_size)) -> None:
 
         super().__init__()
         cnn_conf = cnn_conf.__dict__
@@ -70,12 +77,21 @@ class GCNLSTMTransformer(nn.Module):
         transformer_encoder_conf = transformer_encoder_conf.__dict__
         self.lstm_conf = lstm_conf.__dict__
         
+        self.get_gcn_edges = get_gcn_edges
         self.edge_index = None
+        self.init_lstm_hidden_state = init_lstm_hidden_state
 
         self.lstms: nn.ModuleList = nn.ModuleList()
+        self.hs: List[torch.Tensor] = list()
+        self.cs: List[torch.Tensor] = list()
+
         self.gcns: nn.ModuleList = nn.ModuleList()
+        
         for _ in range(n):
             self.lstms.append(nn.LSTM(**self.lstm_conf))
+            self.hs.append(None)
+            self.cs.append(None)
+
             self.gcns.append(GCNLayer(**self.gcn_conf))
 
         self.ratio_to_apply_loss1: float = ratio_to_apply_loss1
@@ -107,6 +123,15 @@ class GCNLSTMTransformer(nn.Module):
 
         self.loss2 = loss2
 
+    def _get_lstm_hidden_state(self, lstm_idx: int, batch_size: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        h0 = self.init_lstm_hidden_state(self.lstm_conf["num_layers"], batch_size, self.lstm_conf["hidden_size"])
+        c0 = self.init_lstm_hidden_state(self.lstm_conf["num_layers"], batch_size, self.lstm_conf["hidden_size"])
+
+        return h0, c0
+
+    def _update_lstm_hidden_state(self, lstm_idx: int, h: torch.Tensor, c: torch.Tensor) -> None:
+        pass
+
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Args:
@@ -117,15 +142,17 @@ class GCNLSTMTransformer(nn.Module):
         """
 
         if self.edge_index is None:
-            self.edge_index = Skeleton.get_interframe_edges_mode2(x.size(1), I=30, offset=20)
+            self.edge_index = self.get_gcn_edges(x.size(1))
 
         x1 = x.clone()       
-        for gcn, lstm in zip(self.gcns, self.lstms):
-            h0 = torch.randn(self.lstm_conf["num_layers"], x.size(0), self.lstm_conf["hidden_size"]).to(x1.device)
-            c0 = torch.randn(self.lstm_conf["num_layers"], x.size(0), self.lstm_conf["hidden_size"]).to(x1.device)
+        for idx, (gcn, lstm) in enumerate(zip(self.gcns, self.lstms)):
+            h0, c0 = self._get_lstm_hidden_state(idx, x.size(0))
+            h0 = h0.to(x1.device)
+            c0 = c0.to(x1.device)
 
-            x1, (_, _) = lstm(x1, (h0, c0)) 
-            
+            x1, (h, c) = lstm(x1, (h0, c0)) 
+            self._update_lstm_hidden_state(idx, h, c)
+
             D = self.gcn_conf["dim_node"]
             N, T, L = x1.size()
             x1 = x1.reshape(N, T, -1, D)
