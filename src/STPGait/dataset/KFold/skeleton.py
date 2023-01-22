@@ -68,7 +68,8 @@ class SkeletonKFoldOperator(KFoldOperator[TT], Generic[TT, C]):
         self._labels = labels[indices]
         self._names = names[indices]
         self._hard_cases_id = hard_cases_id
-        self._mask = self._generate_missed_frames()
+        self._node_invalidity = self._generate_missed_frames()
+        self._mask = self._node_invalidity.sum(2) > 0
 
         super().__init__(self.conf.kfold_config.K, self.conf.kfold_config.init_valK, self.conf.kfold_config.init_testK)
 
@@ -92,34 +93,36 @@ class SkeletonKFoldOperator(KFoldOperator[TT], Generic[TT, C]):
         assert np.all(~np.isnan(self._x)), "There is still NaN values among locations."
 
         # Second, checkout non NaN frames if there are some inconsistency between shoulders, toes, or heads locations.
+        node_invalidity = np.zeros_like(self._x[..., 0], dtype=np.bool)
+        
         ## Critieria joints
-        x_center = self._x[:, :, [Skeleton.CENTER], :] # N, T, 1, C
-        x_lheap = self._x[:, :, [Skeleton.LEFT_HEAP], :] # N, T, 1, C
-        x_lknee = self._x[:, :, [Skeleton.LEFT_KNEE], :] # N, T, 1, C
+        center = self._x[:, :, [Skeleton.CENTER], :] # N, T, 1, C
+        lheap = self._x[:, :, [Skeleton.LEFT_HEAP], :] # N, T, 1, C
+        lknee = self._x[:, :, [Skeleton.LEFT_KNEE], :] # N, T, 1, C
 
-        ## Upper body
-        x_elbows_hands = np.abs(self._x[:, :, Skeleton.ELBOWS_HANDS, :]) # N, T, V1, C
-        x_shoulders = self._x[:, :, Skeleton.SHOULDERS, :] # N, T, V2, C
-        x_heads_eyes_ears = self._x[:, :, Skeleton.HEAD_EYES_EARS, :] # N, T, V3, C
+        ## Upper body verification
+        upper_indices = np.concatenate([Skeleton.SHOULDERS, Skeleton.HEAD_EYES_EARS])
+        y_upper = self._x[:, :, upper_indices, 1] # N, T, VV
+        y_center = center[..., 1]
+        y_lknee = lknee[..., 1]
+        mask1 = ((y_upper - y_center) / (y_upper - y_lknee + 1e-3)) < 0.1
+        node_invalidity[:, :, upper_indices] = mask1
         
-        ## Lower body
-        x_foots = self._x[:, :, Skeleton.WHOLE_FOOT, :] # N, T, V4, C
-
-        ## Verifications
-        vertical_up = np.concatenate((x_shoulders, x_heads_eyes_ears), axis=2)[..., 1] # N, T, VV
-        mask1 = ((vertical_up - x_center[..., 1]) / (vertical_up - x_lknee[..., 1] + 1e-3)) < 0.1
-        mask1 = mask1.sum(2) > 0
+        ## Lower body verification
+        lower_indices = Skeleton.WHOLE_FOOT
+        y_lower = self._x[:, :, lower_indices, 1] # N, T, VVV
+        mask2 = ((y_center - y_lower) / (y_center - y_lknee + 1e-3)) < 1
+        node_invalidity[:, :, lower_indices] = mask2
         
-        vertical_down = x_foots[..., 1] # N, T, VVV
-        mask2 = ((x_center[..., 1] - vertical_down) / (x_center[..., 1] - x_lknee[..., 1] + 1e-3)) < 1
-        mask2 = mask2.sum(2) > 0
+        ## Horizontal verification
+        horizon_indices = Skeleton.ELBOWS_HANDS
+        x_horizon = np.abs(self._x[:, :, horizon_indices, 0]) # N, T, VVVV
+        x_center = center[..., 0]
+        x_lheap = lheap[..., 0]
+        mask3 = ((x_horizon - x_center) / (x_lheap - x_center + 1e-3)) < 0.1 # N, T, VV
+        node_invalidity[:, :, horizon_indices] = mask3
 
-        horizontal = x_elbows_hands[..., 0] # N, T, VVVV        
-        mask3 = ((horizontal - x_center[..., 0]) / (x_lheap[..., 0] - x_center[..., 0] + 1e-3)) < 0.1 # N, T, VV
-        mask3 = mask3.sum(2) > 0
-
-        mask = np.logical_or(np.logical_or(mask, mask1), np.logical_or(mask2, mask3))
-        return mask
+        return node_invalidity
         
         
     def get_labels(self) -> np.ndarray:

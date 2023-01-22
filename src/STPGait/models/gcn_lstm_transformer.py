@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Callable, List, Tuple
+from typing import Callable, Optional, List, Tuple
 from typing_extensions import Protocol
 
 from dig.xgraph.models.models import GCNConv
@@ -69,7 +69,8 @@ class GCNLSTMTransformer(nn.Module):
             loss2: Callable[..., torch.Tensor] = lambda x, y: - torch.mean(x[torch.arange(x.size(0)), y]),
             ratio_to_apply_loss1: float = 0.2,
             get_gcn_edges: Callable[[int], torch.Tensor] = lambda T: Skeleton.get_interframe_edges_mode2(T, I=30, offset=20),
-            init_lstm_hidden_state: Protocol1 = lambda lstm_num_layer, batch_size, hidden_size: torch.randn(lstm_num_layer, batch_size, hidden_size)) -> None:
+            init_lstm_hidden_state: Protocol1 = lambda lstm_num_layer, batch_size, hidden_size: torch.randn(lstm_num_layer, batch_size, hidden_size),
+            check_node_validity: bool = False) -> None:
 
         super().__init__()
         cnn_conf = cnn_conf.__dict__
@@ -80,6 +81,7 @@ class GCNLSTMTransformer(nn.Module):
         self.get_gcn_edges = get_gcn_edges
         self.edge_index = None
         self.init_lstm_hidden_state = init_lstm_hidden_state
+        self._check_node_validity: bool = check_node_validity
 
         self.lstms: nn.ModuleList = nn.ModuleList()
         self.hs: List[torch.Tensor] = list()
@@ -132,10 +134,20 @@ class GCNLSTMTransformer(nn.Module):
     def _update_lstm_hidden_state(self, lstm_idx: int, h: torch.Tensor, c: torch.Tensor) -> None:
         pass
 
-    def forward(self, x: torch.Tensor, y: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def _calc_edge_attr(self, node_valid: Optional[torch.Tensor]=None) -> Optional[torch.Tensor]:
+        if node_valid is None:
+            return None
+        
+        row, col = self.edge_index
+        row_valid, col_valid = node_valid[row], node_valid[col]
+        edge_valid = torch.logical_and(row_valid, col_valid).long()
+        return edge_valid.unsqueeze(1)
+
+    def forward(self, x: torch.Tensor, y: torch.Tensor, x_valid: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Args:
-            x (torch.Tensor): N, T, L
+            x (torch.Tensor): N, T, V*D
+            x_valid (torch.Tensor): A boolean tensor; If True then that node is valid, O.W. invalid (shape: N, T*V)
 
         Returns:
             Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: prediction, loss1 (unsupervised), loss2 (supervised)
@@ -154,10 +166,10 @@ class GCNLSTMTransformer(nn.Module):
             self._update_lstm_hidden_state(idx, h, c)
 
             D = self.gcn_conf["dim_node"]
-            N, T, L = x1.size()
+            N, T, _ = x1.size()
             x1 = x1.reshape(N, T, -1, D)
             
-            data = Batch.from_data_list([Data(x=x_.reshape(-1, D), edge_index=self.edge_index) for x_ in x1])
+            data = Batch.from_data_list([Data(x=x_.reshape(-1, D), edge_index=self.edge_index, edge_attr=self._calc_edge_attr(xv_)) for x_, xv_ in zip(x1, x_valid)])
             x1 = gcn(data)
 
             data.x = x1

@@ -47,7 +47,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, float, BaseConfig]):
         return model
         
     def _model_forwarding(self, data: IN) -> OUT:
-        x, y = data
+        x, y = data[:2]
         x = x[..., [0, 1]].flatten(2)
         x = self.model(x.to(self.conf.device), y.to(self.conf.device))
         return x
