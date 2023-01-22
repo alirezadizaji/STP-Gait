@@ -69,8 +69,7 @@ class GCNLSTMTransformer(nn.Module):
             loss2: Callable[..., torch.Tensor] = lambda x, y: - torch.mean(x[torch.arange(x.size(0)), y]),
             ratio_to_apply_loss1: float = 0.2,
             get_gcn_edges: Callable[[int], torch.Tensor] = lambda T: Skeleton.get_interframe_edges_mode2(T, I=30, offset=20),
-            init_lstm_hidden_state: Protocol1 = lambda lstm_num_layer, batch_size, hidden_size: torch.randn(lstm_num_layer, batch_size, hidden_size),
-            check_node_validity: bool = False) -> None:
+            init_lstm_hidden_state: Protocol1 = lambda lstm_num_layer, batch_size, hidden_size: torch.randn(lstm_num_layer, batch_size, hidden_size)) -> None:
 
         super().__init__()
         cnn_conf = cnn_conf.__dict__
@@ -81,7 +80,6 @@ class GCNLSTMTransformer(nn.Module):
         self.get_gcn_edges = get_gcn_edges
         self.edge_index = None
         self.init_lstm_hidden_state = init_lstm_hidden_state
-        self._check_node_validity: bool = check_node_validity
 
         self.lstms: nn.ModuleList = nn.ModuleList()
         self.hs: List[torch.Tensor] = list()
@@ -141,7 +139,7 @@ class GCNLSTMTransformer(nn.Module):
         row, col = self.edge_index
         row_valid, col_valid = node_valid[row], node_valid[col]
         edge_valid = torch.logical_and(row_valid, col_valid).long()
-        return edge_valid.unsqueeze(1)
+        return edge_valid
 
     def forward(self, x: torch.Tensor, y: torch.Tensor, x_valid: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
@@ -170,7 +168,7 @@ class GCNLSTMTransformer(nn.Module):
             x1 = x1.reshape(N, T, -1, D)
             
             if x_valid is not None:
-                data = Batch.from_data_list([Data(x=x_.reshape(-1, D), edge_index=self.edge_index, edge_attr=self._calc_edge_attr(xv_)) for x_, xv_ in zip(x1, x_valid)])
+                data = Batch.from_data_list([Data(x=x_.reshape(-1, D), edge_index=self.edge_index, edge_weight=self._calc_edge_attr(xv_)) for x_, xv_ in zip(x1, x_valid)])
             else:
                 data = Batch.from_data_list([Data(x=x_.reshape(-1, D), edge_index=self.edge_index) for x_ in x1])
             x1 = gcn(data)
