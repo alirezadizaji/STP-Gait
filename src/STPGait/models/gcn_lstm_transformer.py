@@ -142,7 +142,7 @@ class GCNLSTMTransformer(nn.Module):
         """
 
         if self.edge_index is None:
-            self.edge_index = self.get_gcn_edges(x.size(1))
+            self.edge_index = self.get_gcn_edges(x.size(1)).to(x.device)
 
         x1 = x.clone()       
         for idx, (gcn, lstm) in enumerate(zip(self.gcns, self.lstms)):

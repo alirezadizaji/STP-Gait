@@ -9,7 +9,7 @@ from ..dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFo
 from ..enums import Optim
 from ..models import GCNLSTMTransformerV2
 from ..preprocess.main import PreprocessingConfig
-from .train import TrainEntrypoint
+from .lstm_gcn_transformer1 import Entrypoint as E
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
@@ -19,7 +19,7 @@ OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 ## Temporal edges removed
 ## LSTM state initialized randomly only at the first iteration of first epoch
 ## LSTM state updated after each forwarding
-class Entrypoint(TrainEntrypoint[IN, OUT, float, BaseConfig]):
+class Entrypoint(E):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(
             config=SkeletonKFoldConfig(
@@ -37,9 +37,9 @@ class Entrypoint(TrainEntrypoint[IN, OUT, float, BaseConfig]):
             save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
-        super().__init__(kfold, config)
+        super(E, self).__init__(kfold, config)
 
     
     def get_model(self):
-        model = GCNLSTMTransformerV2(get_gcn_edges= lambda T: Skeleton.get_vanilla_edges(T))
+        model = GCNLSTMTransformerV2(get_gcn_edges= lambda T: torch.from_numpy(Skeleton.get_vanilla_edges(T)[0]))
         return model
