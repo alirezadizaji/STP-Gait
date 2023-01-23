@@ -4,6 +4,7 @@ from tqdm import tqdm
 from typing import Dict, Generic, List, TYPE_CHECKING, Optional, TypeVar, Union
 
 from dig.xgraph.models import *
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
@@ -165,6 +166,26 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
         
         return False
     
+    def _visualize(self) -> None:
+        ncols = 2
+        nrows = len(self.criteria_names) // ncols + 1
+        fig, axs = plt.subplots(ncols=ncols, nrows=nrows)
+
+        for ci, criterion in enumerate(self.criteria_names):
+            rowi, coli = ci//ncols, ci %ncols
+            save_dir = os.path.join(self.conf.save_dir, "stat_vis")
+            os.makedirs(save_dir, exist_ok=True)
+            save_pth = os.path.join(save_dir, f"{criterion}.png")
+
+            x = list(range(self.epoch))
+            y_train = self._criteria_vals[self._TRAIN_CRITERION_IDX, :self.epoch, ci]
+            y_test = self._criteria_vals[self._TRAIN_CRITERION_IDX, :self.epoch, ci]
+            axs[rowi, coli].set_title(f"{criterion}")
+            axs[rowi, coli].plot(x, y_train, color='blue', label='train')
+            axs[rowi, coli].plot(x, y_test, color='darkyellow', label='val')
+        
+        fig.savefig(save_pth, dpi=600, bbox_inches='tight', format="png")
+
     def _main(self):
         num_epochs = self.conf.training_config.num_epochs
         best_epoch = None
