@@ -36,4 +36,4 @@ class Entrypoint(E):
             save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
-        super(E, self).__init__(kfold, config)
+        super(EE, self).__init__(kfold, config)
