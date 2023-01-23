@@ -27,7 +27,6 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
         self._criteria_vals = np.full((2, self.conf.training_config.num_epochs, len(self.criteria_names)), fill_value=-np.inf)
         self._TRAIN_CRITERION_IDX = 0
         self._VAL_CRITERION_IDX = 1
-        self._TEST_CRITERION_IDX = 2
 
     def _get_weight_save_path(self, epoch: int) -> str:
         weight_save_path =  os.path.join(self.conf.save_dir, "weights", f"{self.kfold.valK}-{self.kfold.testK}", str(epoch))
