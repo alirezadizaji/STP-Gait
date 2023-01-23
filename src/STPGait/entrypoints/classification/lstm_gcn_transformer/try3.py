@@ -10,7 +10,7 @@ from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, K
 from ....enums import Optim
 from ....models import GCNLSTMTransformerV2
 from ....preprocess.main import PreprocessingConfig
-from .r1 import Entrypoint as E
+from .try2 import Entrypoint as E
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]

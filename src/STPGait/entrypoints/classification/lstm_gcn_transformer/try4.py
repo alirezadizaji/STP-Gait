@@ -7,8 +7,8 @@ from ....data.read_gait_data import ProcessingGaitConfig
 from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
 from ....enums import Optim
 from ....preprocess.main import PreprocessingConfig
-from .r2 import Entrypoint as E
-from .r1 import Entrypoint as EE
+from .try3 import Entrypoint as E
+from .try2 import Entrypoint as EE
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
