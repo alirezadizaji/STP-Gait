@@ -14,7 +14,7 @@ IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
 # try 10 (try 4 ->)
-## Use only anxious-hypokinetic_frontal-healthly
+## Use only ataxic-hypokinetic_frontal-healthly
 class Entrypoint(E):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(

@@ -17,12 +17,12 @@ IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
 # try 6 (try 3 ->)
-## Use only anxious-hypokinetic_frontal-healthly
+## Use only ataxic-hypokinetic_frontal-healthly
 class Entrypoint(E):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(
             config=SkeletonKFoldConfig(
-                kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0, remove_labels=[Label.ATAXIC, Label.PARETIC, Label.SENSORY_ATAXIC]),
+                kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0, remove_labels=[Label.ANXIOUS, Label.PARETIC, Label.SENSORY_ATAXIC]),
                 load_dir="../../Data/output_1.pkl",
                 filterout_unlabeled=True,
                 savename="processed_120c.pkl",
