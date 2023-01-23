@@ -1,5 +1,5 @@
 from .edge_type import EdgeType
-from .kfold import KFold
+from .label import Label
 from .optim import Optim
 from .separation import Separation
 from .walk_direction import WalkDirection

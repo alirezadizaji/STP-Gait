@@ -5,23 +5,23 @@ import pickle
 import numpy as np
 import torch
 
-from ..config import BaseConfig, TrainingConfig
-from ..data.read_gait_data import ProcessingGaitConfig
-from ..dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
-from ..enums import Optim, Separation
-from ..models import GCNLSTMTransformer
-from ..preprocess.main import PreprocessingConfig
-from .train import TrainEntrypoint
+from ....config import BaseConfig, TrainingConfig
+from ....data.read_gait_data import ProcessingGaitConfig
+from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
+from ....enums import Optim, Separation
+from ....models import GCNLSTMTransformer
+from ....preprocess.main import PreprocessingConfig
+from ...train import TrainEntrypoint
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
-# I1: LSTM_GCN_Transformer run
+# try 2: LSTM_GCN_Transformer run
 ## K=10, Having Test set too
 ## Temporal edge exists between nodes during GCN forwarding
 ## LSTM state updated randomly before forwarding
 ## LSTMS have independent initial states
-class Entrypoint(TrainEntrypoint[IN, OUT, float, BaseConfig]):
+class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(
             config=SkeletonKFoldConfig(
@@ -41,7 +41,14 @@ class Entrypoint(TrainEntrypoint[IN, OUT, float, BaseConfig]):
         )
         super().__init__(kfold, config)
 
+    @property
+    def criteria_names(self) -> List[str]:
+        return super().criteria_names + ['ACC']
     
+    @property
+    def best_epoch_criterion_idx(self) -> int:
+        return self.criteria_names.index('ACC')
+       
     def get_model(self):
         model = GCNLSTMTransformer()
         return model
@@ -85,17 +92,20 @@ class Entrypoint(TrainEntrypoint[IN, OUT, float, BaseConfig]):
         self.correct += torch.sum(y_pred == y).item()
         self.total += y.numel()
 
-    def _train_epoch_end(self):
+    def _train_epoch_end(self) -> np.ndarray:
+        loss = np.mean(self.losses)
         acc = self.correct / self.total
-        print(f'epoch{self.epoch} loss value {np.mean(self.losses)} acc {acc}', flush=True)
-    
-    def _eval_epoch_end(self, datasep: Separation):
-        acc = self.correct / self.total
-        print(f'epoch{self.epoch} {datasep} acc {acc}', flush=True)
+        print(f'epoch{self.epoch} loss value {loss} acc {acc}', flush=True)
 
-        print(f'epoch {self.epoch} separation {datasep} loss value {np.mean(self.losses)} acc {acc}', flush=True)
-        return acc
+        return np.array([loss, acc])
+    
+    def _eval_epoch_end(self, datasep: Separation) -> np.ndarray:
+        acc = self.correct / self.total
+        loss = np.mean(self.losses)
+        print(f'epoch {self.epoch} separation {datasep} loss value {loss} acc {acc}', flush=True)
+        return np.array([loss, acc])
 
     def best_epoch_criteria(self, best_epoch: int) -> bool:
-        val = self.val_criterias[self.kfold.valK, self.epoch]
-        return val > self.val_criterias[self.kfold.valK, best_epoch]
+        val = self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch, self.best_epoch_criterion_idx]
+        best = self._criteria_vals[self._VAL_CRITERION_IDX, best_epoch, self.best_epoch_criterion_idx]
+        return val > best

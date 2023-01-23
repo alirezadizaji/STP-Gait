@@ -1,23 +1,32 @@
 from abc import ABC, abstractmethod
 import os
 from tqdm import tqdm
-from typing import Dict, Generic, TYPE_CHECKING, Optional, TypeVar
+from typing import Dict, Generic, List, TYPE_CHECKING, Optional, TypeVar, Union
 
 from dig.xgraph.models import *
 import numpy as np
 import torch
-from torch.nn import functional as F
 
 from ..config import BaseConfig
 from .core import MainEntrypoint
-from ..enums import Separation, Optim
+from ..enums import Separation
 
 if TYPE_CHECKING:
     from torch.utils.data import DataLoader
 
 T = TypeVar('T', bound=BaseConfig)
-IN, OUT, C = TypeVar('IN'), TypeVar('OUT'), TypeVar('C')
-class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, C, T]):
+IN, OUT = TypeVar('IN'), TypeVar('OUT')
+class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
+
+
+    def __init__(self, kfold, conf: T) -> None:
+        super().__init__(kfold, conf)
+
+        # criteria defined for train/validation sets to be visualized
+        self._criteria_vals = np.full_like((2, self.conf.training_config.num_epochs, len(self.criteria_names)), fill_value=-np.inf)
+        self._TRAIN_CRITERION_IDX = 0
+        self._VAL_CRITERION_IDX = 1
+        self._TEST_CRITERION_IDX = 2
 
     def _get_weight_save_path(self, epoch: int) -> str:
         weight_save_path =  os.path.join(self.conf.save_dir, "weights", f"{self.kfold.valK}-{self.kfold.testK}", str(epoch))
@@ -34,8 +43,6 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, C, T]):
         Returns:
             (_type_): model output
         """
-        # x = self.model(data)
-        # return x
 
     @abstractmethod
     def _calc_loss(self, x: OUT, data: IN) -> torch.Tensor:
@@ -48,20 +55,14 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, C, T]):
         Returns:
             torch.Tensor: loss value
         """
-        # x = F.log_softmax(x, dim=-1)
-        # loss = - torch.mean(x[torch.arange(x.size(0)), data])
-        # return loss
 
     @abstractmethod
     def _train_start(self) -> None:
         """ Any tasks that should be accomplished before starting training epoch. """
-        # self.correct = self.total = 0
-        # self.losses = list()
 
     @abstractmethod
     def _eval_start(self) -> None:
         """ Any tasks that should be accomplished before starting evaluation epoch. """
-        # self._train_start()
 
     @abstractmethod
     def _train_iter_end(self, iter_num: int, loss: torch.Tensor, x: OUT, data: IN) -> None:
@@ -72,14 +73,6 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, C, T]):
             x (U): model output
             data (T): dataloader output
         """
-        # self.losses.append(loss.item())
-
-        # y_pred = x.argmax(-1)
-        # self.correct += torch.sum(y_pred == data.y).item()
-        # self.total += data.y.numel()
-
-        # if iter_num % 20 == 0:
-        #     print(f'epoch {self.epoch} iter {iter_num} loss value {np.mean(self.losses)}', flush=True)
 
     @abstractmethod
     def _eval_iter_end(self, separation: Separation, iter_num: int, loss: torch.Tensor, x: OUT, data: IN) -> None:
@@ -91,26 +84,26 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, C, T]):
             x (U): model output
             data (T): dataloader output
         """
-        # y_pred = x.argmax(-1)
-        # self.correct += torch.sum(y_pred == data.y).item()
-        # self.total += data.y.numel()
 
     @abstractmethod
-    def _train_epoch_end(self) -> None:
+    def _train_epoch_end(self) -> np.ndarray:
         """ Any tasks that should be accomplished at the end of the training epoch. """
-        # print(f'epoch {self.epoch} train acc {self.correct/self.total}', flush=True)
 
     @abstractmethod
-    def _eval_epoch_end(self, datasep: Separation) -> C:
+    def _eval_epoch_end(self, datasep: Separation) -> np.ndarray:
         """ Any tasks that should be accomplished at the end of the evaluation epoch. """
-        # acc = self.correct / self.total
-        # print(f'epoch{self.epoch} {datasep} acc {acc}', flush=True)
 
     @abstractmethod
     def best_epoch_criteria(self, best_epoch: int) -> bool:
         """ Criteria that determines whether best epoch changes or not. """        
-        # val = self.val_criterias[self.kfold.valK, self.epoch]
-        # return val > self.val_criterias[self.kfold.valK, best_epoch]
+
+    @property
+    def criteria_names(self) -> List[str]:
+        return ['Loss']
+
+    @property
+    def best_epoch_criterion_idx(self) -> int:
+        return self.criteria_names.index('Loss')
 
     def _save_model_weight(self) -> None:
         torch.save(self.model.state_dict(), self._get_weight_save_path(self.epoch))
@@ -137,9 +130,11 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, C, T]):
 
             self._train_iter_end(i, loss, x, data)
 
-        self._train_epoch_end()
+        criteria = self._train_epoch_end()
+        assert criteria.size == len(self.criteria_names), "Mismatch between criteria values length and number of existing names."
+        self._criteria_vals[self._TRAIN_CRITERION_IDX, self.epoch] = criteria
 
-    def _validate_for_one_epoch(self, separation: Separation, loader: 'DataLoader') -> C:
+    def _validate_for_one_epoch(self, separation: Separation, loader: 'DataLoader') -> Union[None, np.ndarray]:
         self.model.eval()
 
         self._eval_start()
@@ -155,7 +150,12 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, C, T]):
 
                 self._eval_iter_end(i, separation, loss, x, data)
 
-            return self._eval_epoch_end(separation)            
+            criteria = self._eval_epoch_end(separation)
+            assert criteria.size == len(self.criteria_names), "Mismatch between criteria values length and number of existing names."
+            if separation == Separation.VAL:
+                self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch] = criteria
+            else:
+                return criteria
 
     def _early_stopping(self, best_epoch: Optional[int], thd: int = 50) -> bool:
         best = best_epoch if best_epoch is not None else 0
@@ -170,8 +170,8 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, C, T]):
         best_epoch = None
         for self.epoch in tqdm(range(num_epochs)):
             self._train_for_one_epoch()
-            val: C = self._validate_for_one_epoch(Separation.VAL, self.val_loader) 
-            self.val_criterias[self.kfold.valK, self.epoch] = val
+            self._validate_for_one_epoch(Separation.VAL, self.val_loader)
+            val = self._criteria_vals[1, self.epoch, self.best_epoch_criterion_idx]
             
             # save only best epoch in terms of validation accuracy             
             if best_epoch is None or self.best_epoch_criteria(best_epoch):
@@ -188,16 +188,17 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, C, T]):
                 break
 
         # evaluate best epoch on test set
-        self.model.load_state_dict(torch.load(self._get_weight_save_path(best_epoch), map_location=self.conf.device))
-        test: C =self._validate_for_one_epoch(Separation.TEST, self.test_loader)
-        self.test_criterias[self.kfold.testK] = test
-        val: C = self.val_criterias[self.kfold.valK, best_epoch]
+        self.epoch = best_epoch
+        self.model.load_state_dict(torch.load(self._get_weight_save_path(self.epoch), map_location=self.conf.device))
+        criteria = self._validate_for_one_epoch(Separation.TEST, self.test_loader)
+        test = criteria[self.best_epoch_criterion_idx]
+        self.fold_test_criterion[self.kfold.testK] = test
+        val = self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch, self.best_epoch_criterion_idx]
         print(f"@@@@@ Best criteria ValK {self.kfold.valK} epoch {best_epoch} @@@@@\nval: {val}, test: {test}", flush=True)
 
 
     def run(self):
-        self.val_criterias: Dict[int, Dict[int, C]] = dict()
-        self.test_criterias: Dict[int, C] = dict()
+        self.fold_test_criterion: Dict[int, float] = dict()
 
         for _ in range(self.kfold.K):
             with self.kfold:
@@ -207,4 +208,4 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, C, T]):
                 self.set_optimizer(self.conf.training_config.optim_type)
                 self._main()
         
-        print(f"@@@ Final Result on {self.kfold.K} KFold operation on test set: {np.mean(list(self.test_criterias.values()))} @@@", flush=True)
+        print(f"@@@ Final Result on {self.kfold.K} KFold operation on test set: {np.mean(list(self.fold_test_criterion.values()))} @@@", flush=True)

@@ -5,18 +5,18 @@ import pickle
 import numpy as np
 import torch
 
-from ..config import BaseConfig, TrainingConfig
-from ..dataset.KFold import SkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
-from ..dataset.skeleton import SkeletonDataset
-from ..enums import Optim, Separation
+from ...config import BaseConfig, TrainingConfig
+from ...dataset.KFold import SkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
+from ...dataset.skeleton import SkeletonDataset
+from ...enums import Optim, Separation
 
-from ..models.transformer import SimpleTransformer
-from .train import TrainEntrypoint
+from ...models.transformer import SimpleTransformer
+from ..train import TrainEntrypoint
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, np.ndarray]
 OUT = Tuple[torch.Tensor, torch.Tensor]
 
-class Entrypoint(TrainEntrypoint[IN, OUT, float, BaseConfig]):
+class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
     def __init__(self) -> None:
         kfold = SkeletonKFoldOperator[SkeletonDataset, SkeletonKFoldConfig](
             config=SkeletonKFoldConfig(
@@ -93,11 +93,15 @@ class Entrypoint(TrainEntrypoint[IN, OUT, float, BaseConfig]):
             self.names = self.names + names
             self.pred.append(x[0].detach().cpu().numpy())
                 
-    def _train_epoch_end(self) -> None:
-        print(f'epoch {self.epoch} loss value {np.mean(self.losses)}', flush=True)
+    def _train_epoch_end(self) -> np.ndarray:
+        loss = np.mean(self.losses)
+        print(f'epoch {self.epoch} loss value {loss}', flush=True)
+
+        return np.array([loss])
 
     def _eval_epoch_end(self, datasep: Separation):
-        print(f'epoch {self.epoch} separation {datasep} loss value {np.mean(self.losses)}', flush=True)
+        loss = np.mean(self.losses)
+        print(f'epoch {self.epoch} separation {datasep} loss value {loss}', flush=True)
 
         # SAVE TEST outputs
         if datasep == Separation.TEST:
@@ -109,8 +113,9 @@ class Entrypoint(TrainEntrypoint[IN, OUT, float, BaseConfig]):
                 pred = np.stack(np.array_split(pred, self.test_loader.dataset.V, axis=2), axis=2)
                 pickle.dump((np.concatenate(pred), None, np.array(self.names), None), f)
 
-        return np.mean(self.losses)
+        return np.array([loss])
 
     def best_epoch_criteria(self, best_epoch: int) -> bool:
-        val = self.val_criterias[self.kfold.valK, self.epoch]
-        return val <= self.val_criterias[self.kfold.valK, best_epoch]
+        val = self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch, self.best_epoch_criterion_idx]
+        best = self._criteria_vals[self._VAL_CRITERION_IDX, best_epoch, self.best_epoch_criterion_idx]
+        return val <= best

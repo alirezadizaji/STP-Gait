@@ -2,24 +2,24 @@ from typing import Tuple
 
 import torch
 
-from ..config import BaseConfig, TrainingConfig
-from ..data.read_gait_data import ProcessingGaitConfig
-from ..dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
-from ..enums import Optim
-from ..preprocess.main import PreprocessingConfig
-from .lstm_gcn_transformer2 import Entrypoint as E
-from .lstm_gcn_transformer1 import Entrypoint as EE
+from ....config import BaseConfig, TrainingConfig
+from ....data.read_gait_data import ProcessingGaitConfig
+from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
+from ....enums import Optim
+from ....preprocess.main import PreprocessingConfig
+from .r2 import Entrypoint as E
+from .r1 import Entrypoint as EE
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
-# I3 (I2 ->)
+# try 4 (try 3 ->)
 ## Edge attributes added: 0 -> has at least one invalid node, 1 -> both nodes are valid.
 class Entrypoint(E):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(
             config=SkeletonKFoldConfig(
-                kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=1),
+                kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0),
                 load_dir="../../Data/output_1.pkl",
                 filterout_unlabeled=True,
                 savename="processed_120c.pkl",

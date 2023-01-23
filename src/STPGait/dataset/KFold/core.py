@@ -14,6 +14,8 @@ class KFoldConfig:
     K: int = 10
     init_valK: int = 0
     init_testK: int = 1
+    remove_labels: List[str] = list()
+
 
 class KFoldOperator(ABC, Generic[T]):
     r""" It initializes the train/test/validation sets, using KFold strategy.
@@ -22,11 +24,12 @@ class KFoldOperator(ABC, Generic[T]):
         K (int, optional): Number of KFolds in general. Defaults to `10`.
         init_valK (int, optional): Initial Kth number to assign validation. Defaults to `0`.
         init_testK (int, optional): Initial Kth number to assign test. Defaults to `1`.
+        remove_labels (List[str], optional): Labels to be removed. Defaults to `list()`.
         
     NOTE:
         Each validation and test sets will get 1/K partial of the whole dataset.
     """
-    def __init__(self, K:int = 10, init_valK: int = 0, init_testK: int = 1) -> None:
+    def __init__(self, K:int = 10, init_valK: int = 0, init_testK: int = 1, remove_labels: List[str] = list()) -> None:
 
         self.K = K
         self._init_valK = init_valK
@@ -39,8 +42,24 @@ class KFoldOperator(ABC, Generic[T]):
 
         # Split indices belong to each label into K subsets
         self._label_to_splits: Dict[int, List[np.ndarray]] = {}
-        self._ulabels, self._label_indices = np.unique(self.get_labels(), return_inverse=True)
-        for i, _ in enumerate(self._ulabels):
+        ulabels, label_indices = np.unique(self.get_labels(), return_inverse=True)
+        ulabels = ulabels.tolist()
+        num_samples = label_indices.size
+
+        if remove_labels:
+            unused = np.array([ulabels.index(l) for l in remove_labels])
+            mask = (label_indices[:, np.newaxis] == unused[np.newaxis, :]).sum(1)
+            label_indices = label_indices[~mask]
+
+            for i in unused:
+                del ulabels[i]
+
+        print(f"### {label_indices.size} out of {num_samples} remained after removing `{remove_labels}` ###", flush=True)
+
+        self._label_indices = label_indices
+        self._ulabels = ulabels
+
+        for i in range(len(ulabels)):
             l_idxs = np.nonzero(self._label_indices == i)
             self._label_to_splits[i] = np.array_split(l_idxs[0], K)
 

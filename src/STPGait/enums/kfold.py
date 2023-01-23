@@ -1,2 +1,0 @@
-class KFold:
-    SKELETON = "SKELETON"

@@ -3,19 +3,19 @@ from typing import Tuple
 import torch
 from torch.utils.data import DataLoader
 
-from ..config import BaseConfig, TrainingConfig
-from ..context import Skeleton
-from ..data.read_gait_data import ProcessingGaitConfig
-from ..dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
-from ..enums import Optim
-from ..models import GCNLSTMTransformerV2
-from ..preprocess.main import PreprocessingConfig
-from .lstm_gcn_transformer1 import Entrypoint as E
+from ....config import BaseConfig, TrainingConfig
+from ....context import Skeleton
+from ....data.read_gait_data import ProcessingGaitConfig
+from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
+from ....enums import Optim
+from ....models import GCNLSTMTransformerV2
+from ....preprocess.main import PreprocessingConfig
+from .r1 import Entrypoint as E
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
-# I2 (I1 ->)
+# try 3 (try 2 ->)
 ## K=5, Test set have been removed indeed (Val and Test are same)
 ## Temporal edges removed
 ## LSTM state initialized randomly only at the first iteration of first epoch
@@ -24,7 +24,7 @@ class Entrypoint(E):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(
             config=SkeletonKFoldConfig(
-                kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=1),
+                kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0),
                 load_dir="../../Data/output_1.pkl",
                 filterout_unlabeled=True,
                 savename="processed_120c.pkl",
@@ -46,6 +46,7 @@ class Entrypoint(E):
         return model
 
     def set_loaders(self) -> None:
-        self.train_loader = DataLoader(self.kfold.train, batch_size=self.conf.training_config.batch_size, shuffle=self.conf.training_config.shuffle_training, drop_last=True)
-        self.val_loader = DataLoader(self.kfold.val, batch_size=self.conf.eval_batch_size, drop_last=True)
-        self.test_loader = DataLoader(self.kfold.test, batch_size=self.conf.eval_batch_size, drop_last=True)
+        super().set_loaders()
+        self.train_loader.drop_last = True
+        self.val_loader.drop_last = True
+        self.test_loader.drop_last = True

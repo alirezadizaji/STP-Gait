@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 import os
-from typing import Optional, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..enums import Dataset, Optim
+    from ..enums import Optim
 
 
 @dataclass
@@ -25,6 +25,9 @@ class BaseConfig:
 
     eval_batch_size: int
     """ Evaluation batch size """
+
+    remove_labels: List[str] = list()
+    """ Labels to be removed """
 
     @property
     def save_dir(self):
