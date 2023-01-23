@@ -42,24 +42,20 @@ class KFoldOperator(ABC, Generic[T]):
 
         # Split indices belong to each label into K subsets
         self._label_to_splits: Dict[int, List[np.ndarray]] = {}
-        ulabels, label_indices = np.unique(self.get_labels(), return_inverse=True)
-        ulabels = ulabels.tolist()
-        num_samples = label_indices.size
-
+        labels = self.get_labels()
+        num_samples = labels.size
+        
         if remove_labels:
-            unused = np.array([ulabels.index(l) for l in remove_labels])
-            mask = (label_indices[:, np.newaxis] == unused[np.newaxis, :]).sum(1)
-            label_indices = label_indices[~mask]
+            mask = np.ones_like(labels, dtype=np.bool)
+            for i, l in enumerate(labels):
+                if l in remove_labels:
+                    mask[i] = False
+            labels = labels[mask]
+        
+        print(f"### {labels.size} out of {num_samples} remained after removing `{remove_labels}` ###", flush=True)
 
-            for i in unused:
-                del ulabels[i]
-
-        print(f"### {label_indices.size} out of {num_samples} remained after removing `{remove_labels}` ###", flush=True)
-
-        self._label_indices = label_indices
-        self._ulabels = ulabels
-
-        for i in range(len(ulabels)):
+        self._ulabels, self._label_indices = np.unique(labels, return_inverse=True)
+        for i in range(self._ulabels.size):
             l_idxs = np.nonzero(self._label_indices == i)
             self._label_to_splits[i] = np.array_split(l_idxs[0], K)
 
