@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, Generic, List, Tuple, TypeVar
 
 import numpy as np
@@ -14,7 +14,7 @@ class KFoldConfig:
     K: int = 10
     init_valK: int = 0
     init_testK: int = 1
-    remove_labels: List[str] = list()
+    remove_labels: List[str] = field(default_factory=list)
 
 
 class KFoldOperator(ABC, Generic[T]):

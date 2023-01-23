@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import os
 from typing import List, Optional, TYPE_CHECKING
 
@@ -26,7 +26,7 @@ class BaseConfig:
     eval_batch_size: int
     """ Evaluation batch size """
 
-    remove_labels: List[str] = list()
+    remove_labels: List[str] = field(default_factory=list)
     """ Labels to be removed """
 
     @property

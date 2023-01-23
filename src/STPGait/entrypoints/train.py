@@ -24,7 +24,7 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
         super().__init__(kfold, conf)
 
         # criteria defined for train/validation sets to be visualized
-        self._criteria_vals = np.full_like((2, self.conf.training_config.num_epochs, len(self.criteria_names)), fill_value=-np.inf)
+        self._criteria_vals = np.full((2, self.conf.training_config.num_epochs, len(self.criteria_names)), fill_value=-np.inf)
         self._TRAIN_CRITERION_IDX = 0
         self._VAL_CRITERION_IDX = 1
         self._TEST_CRITERION_IDX = 2
@@ -166,24 +166,29 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
         
         return False
     
-    def _visualize(self) -> None:
+    def _visualize_metrics(self) -> None:
         ncols = 2
         nrows = len(self.criteria_names) // ncols + 1
         fig, axs = plt.subplots(ncols=ncols, nrows=nrows)
 
+        os.makedirs(self.conf.save_dir, exist_ok=True)
+        save_pth = os.path.join(self.conf.save_dir, f"metric.png")
+    
         for ci, criterion in enumerate(self.criteria_names):
             rowi, coli = ci//ncols, ci %ncols
-            save_dir = os.path.join(self.conf.save_dir, "stat_vis")
-            os.makedirs(save_dir, exist_ok=True)
-            save_pth = os.path.join(save_dir, f"{criterion}.png")
 
             x = list(range(self.epoch))
             y_train = self._criteria_vals[self._TRAIN_CRITERION_IDX, :self.epoch, ci]
-            y_test = self._criteria_vals[self._TRAIN_CRITERION_IDX, :self.epoch, ci]
+            y_val = self._criteria_vals[self._VAL_CRITERION_IDX, :self.epoch, ci]
             axs[rowi, coli].set_title(f"{criterion}")
             axs[rowi, coli].plot(x, y_train, color='blue', label='train')
-            axs[rowi, coli].plot(x, y_test, color='darkyellow', label='val')
+            axs[rowi, coli].plot(x, y_val, color='goldenrod', label='val')
+            axs[rowi, coli].legend()
         
+        for ii in range(ci + 1, nrows*ncols):
+            rowi, coli = ii//ncols, ii%ncols
+            fig.delaxes(axs[rowi, coli])
+
         fig.savefig(save_pth, dpi=600, bbox_inches='tight', format="png")
 
     def _main(self):
@@ -203,7 +208,7 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
                 print(f"### Best epoch changed to {best_epoch} criteria {val} ###", flush=True)
 
             # Visualize metrics
-            self._visualize()
+            self._visualize_metrics()
 
             # check early stopping if necessary
             if self.conf.training_config.early_stop is not None \

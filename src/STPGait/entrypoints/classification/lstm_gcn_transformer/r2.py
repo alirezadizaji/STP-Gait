@@ -46,7 +46,6 @@ class Entrypoint(E):
         return model
 
     def set_loaders(self) -> None:
-        super().set_loaders()
-        self.train_loader.drop_last = True
-        self.val_loader.drop_last = True
-        self.test_loader.drop_last = True
+        self.train_loader = DataLoader(self.kfold.train, batch_size=self.conf.training_config.batch_size, shuffle=self.conf.training_config.shuffle_training, drop_last=True)
+        self.val_loader = DataLoader(self.kfold.val, batch_size=self.conf.eval_batch_size, drop_last=True)
+        self.test_loader = DataLoader(self.kfold.test, batch_size=self.conf.eval_batch_size, drop_last=True)
