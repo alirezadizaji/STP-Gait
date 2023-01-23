@@ -16,7 +16,7 @@ from .try2 import Entrypoint as EE
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
-# try 6 (try 3 ->)
+# try 9 (try 3 ->)
 ## Use only ataxic-hypokinetic_frontal-healthly
 class Entrypoint(E):
     def __init__(self) -> None:
@@ -29,11 +29,11 @@ class Entrypoint(E):
                 proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)))
             )
         config = BaseConfig(
-            try_num=6,
+            try_num=9,
             try_name="lstm_gcn_transformer",
             device="cuda:0",
             eval_batch_size=32,
             save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
-        super(EE, self).__init__(kfold, config)
+        super(E, self).__init__(kfold, config)
