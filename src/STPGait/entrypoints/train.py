@@ -27,6 +27,7 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
         self._criteria_vals = np.full((2, self.conf.training_config.num_epochs, len(self.criteria_names)), fill_value=-np.inf)
         self._TRAIN_CRITERION_IDX = 0
         self._VAL_CRITERION_IDX = 1
+        self._TEST_CRITERION_IDX = 2
 
     def _get_weight_save_path(self, epoch: int) -> str:
         weight_save_path =  os.path.join(self.conf.save_dir, "weights", f"{self.kfold.valK}-{self.kfold.testK}", str(epoch))
@@ -165,13 +166,14 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
         
         return False
     
-    def _visualize_metrics(self) -> None:
+    def _visualize(self) -> None:
         ncols = 2
         nrows = len(self.criteria_names) // ncols + 1
         fig, axs = plt.subplots(ncols=ncols, nrows=nrows)
 
-        os.makedirs(self.conf.save_dir, exist_ok=True)
-        save_pth = os.path.join(self.conf.save_dir, f"metric.png")
+        save_dir = os.path.join(self.conf.save_dir, "metrics")
+        os.makedirs(save_dir, exist_ok=True)
+        save_pth = os.path.join(save_dir, f"Val{self.kfold.valK}-Test{self.kfold.testK}.png")
     
         for ci, criterion in enumerate(self.criteria_names):
             rowi, coli = ci//ncols, ci %ncols
@@ -207,7 +209,8 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
                 print(f"### Best epoch changed to {best_epoch} criteria {val} ###", flush=True)
 
             # Visualize metrics
-            self._visualize_metrics()
+            if self.epoch % 10 == 0:
+                self._visualize()
 
             # check early stopping if necessary
             if self.conf.training_config.early_stop is not None \
