@@ -202,6 +202,9 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
                 best_epoch = self.epoch
                 print(f"### Best epoch changed to {best_epoch} criteria {val} ###", flush=True)
 
+            # Visualize metrics
+            self._visualize()
+
             # check early stopping if necessary
             if self.conf.training_config.early_stop is not None \
                     and self._early_stopping(best_epoch, self.conf.training_config.early_stop):
