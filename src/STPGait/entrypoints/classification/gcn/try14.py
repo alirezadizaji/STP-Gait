@@ -21,14 +21,16 @@ OUT = torch.Tensor
 # try 14
 ## Applying inter-frame edge connection using mode 1 using dilation 30. 
 ## Network is gcn3l with 60 hidden neurons each.
-## KFold validation with K = 10.
+## KFold validation with K = 5 without test set.
+## remove hard cases
 class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(
             config=SkeletonKFoldConfig(
-                kfold_config=KFoldConfig(K=10, init_valK=0, init_testK=1),
+                kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0),
                 load_dir="../../Data/output_1.pkl",
                 filterout_unlabeled=True,
+                filterout_hardcases=True,
                 savename="processed_120c.pkl",
                 proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)))
             )
