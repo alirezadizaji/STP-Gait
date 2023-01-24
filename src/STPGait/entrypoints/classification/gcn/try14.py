@@ -51,9 +51,11 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         return Skeleton.get_simple_interframe_edges(num_frames, dilation=30)
 
     def _model_forwarding(self, data: IN) -> OUT:
-        x = data[0].flatten(1, -2) # N, T*V, D
+        x = data[0][..., [0, 1]] # Use X-Y features
         edge_index = self._get_edges(x.size(1))
+        x = x.flatten(1, -2) # N, T*V, D
         data = Batch.from_data_list([Data(x=x_, edge_index=edge_index) for x_ in x])
+        data = data.to(x.device)
         out: OUT = self.model(data=data)
         return out
 

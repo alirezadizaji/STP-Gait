@@ -1,7 +1,3 @@
-from typing import List
-
-from torch_geometric.data import Batch, Data
-
 from ....config import BaseConfig, TrainingConfig
 from ....context import Skeleton
 from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig

@@ -1,6 +1,4 @@
-from typing import List
-
-from torch_geometric.data import Batch, Data
+import torch
 
 from ....config import BaseConfig, TrainingConfig
 from ....context import Skeleton
@@ -33,4 +31,4 @@ class Entrypoint(E):
         super(E, self).__init__(kfold, config)
 
     def _get_edges(self, num_frames: int):
-        return Skeleton.get_vanilla_edges(num_frames)
+        return torch.from_numpy(Skeleton.get_vanilla_edges(num_frames)[0])
