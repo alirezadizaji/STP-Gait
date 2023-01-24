@@ -10,6 +10,8 @@ from ....enums import Optim
 from ....preprocess.main import PreprocessingConfig
 from .try14 import Entrypoint as E
 
+# try 18 (try 14 ->)
+## Applying non-temporal edges
 class Entrypoint(E):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(

@@ -18,6 +18,10 @@ from ...train import TrainEntrypoint
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = torch.Tensor
 
+# try 14
+## Applying inter-frame edge connection using mode 1 using dilation 30. 
+## Network is gcn3l with 60 hidden neurons each.
+## KFold validation with K = 10.
 class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(

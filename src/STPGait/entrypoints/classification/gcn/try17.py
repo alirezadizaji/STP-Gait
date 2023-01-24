@@ -10,6 +10,8 @@ from ....enums import Optim
 from ....preprocess.main import PreprocessingConfig
 from .try14 import Entrypoint as E
 
+# try 17 (try 14 ->)
+## Applying inter-frame edge connection using mode 2 with chunk size 60 and stride 30
 class Entrypoint(E):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(

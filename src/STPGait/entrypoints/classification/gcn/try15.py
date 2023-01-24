@@ -10,6 +10,8 @@ from ....enums import Optim
 from ....preprocess.main import PreprocessingConfig
 from .try14 import Entrypoint as E
 
+# try 15 (try 14 ->)
+## only using the lower part of the skeleton sequence. 
 class Entrypoint(E):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(
