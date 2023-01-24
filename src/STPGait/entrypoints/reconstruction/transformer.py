@@ -32,7 +32,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
             save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
-        super().__init__(kfold, config)
+        super(TrainEntrypoint, self).__init__(kfold, config)
     
     def get_model(self):
         model = SimpleTransformer(apply_loss_in_mask_loc=False)

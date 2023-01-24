@@ -1,22 +1,19 @@
 from typing import Tuple
 
 import torch
-from torch.utils.data import DataLoader
 
 from ....config import BaseConfig, TrainingConfig
-from ....context import Skeleton
 from ....data.read_gait_data import ProcessingGaitConfig
 from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
 from ....enums import Optim, Label
-from ....models import GCNLSTMTransformerV2
 from ....preprocess.main import PreprocessingConfig
-from .try3 import Entrypoint as E
-from .try2 import Entrypoint as EE
+from .try9 import Entrypoint as E
+from ...train import TrainEntrypoint
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
-# try 9 (try 3 ->)
+# try 12 (try 9 ->)
 ## Filter hard case samples
 class Entrypoint(E):
     def __init__(self) -> None:
@@ -37,4 +34,4 @@ class Entrypoint(E):
             save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
-        super(E, self).__init__(kfold, config)
+        super(TrainEntrypoint, self).__init__(kfold, config)

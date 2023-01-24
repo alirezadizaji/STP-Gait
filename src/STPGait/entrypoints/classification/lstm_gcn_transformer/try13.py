@@ -7,8 +7,8 @@ from ....data.read_gait_data import ProcessingGaitConfig
 from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
 from ....enums import Optim, Label
 from ....preprocess.main import PreprocessingConfig
-from .try4 import Entrypoint as E
-from .try2 import Entrypoint as EE
+from .try10 import Entrypoint as E
+from ...train import TrainEntrypoint
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
@@ -34,4 +34,4 @@ class Entrypoint(E):
             save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
-        super(EE, self).__init__(kfold, config)
+        super(TrainEntrypoint, self).__init__(kfold, config)
