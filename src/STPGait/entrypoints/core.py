@@ -19,11 +19,10 @@ class MainEntrypoint(ABC, Generic[T]):
         self.conf: T = conf
     
         self.kfold: KFoldOperator = kfold
-        self.set_optimizer(self.conf.training_config.optim_type)
-        self.train_loader = self.val_loader = self.test_loader = None
-
         self.model: nn.Module = self.get_model()
         self.model.to(self.conf.device)
+        self.set_optimizer(self.conf.training_config.optim_type)
+        self.train_loader = self.val_loader = self.test_loader = None
     
     def set_loaders(self) -> None:
         self.train_loader = DataLoader(self.kfold.train, batch_size=self.conf.training_config.batch_size, shuffle=self.conf.training_config.shuffle_training)
