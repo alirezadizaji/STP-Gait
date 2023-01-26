@@ -45,9 +45,15 @@ def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl",
     num_samples = raw_data.shape[0]   
     data = np.zeros((num_samples, max_frame, num_nodes, num_features)) # N, T, V, C
 
+    # indexes groups
+    upper_body_idx = [8, 9, 12, 1, 2, 3, 4, 5, 6, 7, 0, 15, 16, 17, 18]
+    left_foot_idx = [14, 20, 21]
+    left_knee_idx = [13]
+    right_foot_idx = [11, 23, 24]
+    right_knee_idx = [10]
+
     for idx, r in enumerate(raw_data):
-        sample_num_frames = min(r.shape[0], max_frame)
-        r = r[:sample_num_frames]
+        sample_num_frames = num_frames[idx]
         sample_feature = np.stack(np.split(r, num_nodes, axis=1), axis=1) # T, V, C - 1
         sample_gait = gait_seq[idx]
 
@@ -56,6 +62,7 @@ def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl",
             # Seems like the first two steps is when the patient enters to the process :), since it is always NaN
             step_time = np.array(list(sample_gait['STime'].values()))[2:]
             step_len = np.array(list(sample_gait["SLen"].values()))[2:]
+            step_foot = np.array(list(sample_gait["Foot"].values()))[2:]
 
             total_time = step_time.sum()
             num_frames_per_sec = sample_num_frames / total_time
@@ -63,19 +70,37 @@ def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl",
             end_len = start_len = 0
             
             # fill Z values
-            for length, time in zip(step_len, step_time):
+            for length, time, foot in zip(step_len, step_time, step_foot):
                 step_frames = int(time * num_frames_per_sec) + 1
                 
                 if step_frames + start_frame_idx > sample_num_frames:
                     step_frames = sample_num_frames - start_frame_idx
                 
-                end_len = start_len + length
-                zs = np.linspace(start_len, end_len, step_frames)
-                sample_z[start_frame_idx: start_frame_idx + step_frames] = zs[..., None]
+                if foot == 0: #right foot
+                    right_foot_z = np.linspace(start_len, start_len + length, step_frames)
+                    right_knee_z = np.linspace(start_len, start_len + (3/4)*length, step_frames)
+                    left_knee_z = np.linspace(start_len, start_len + (1/4)*length, step_frames)
+                    upper_body_z = np.linspace(start_len, start_len + (1/2)*length, step_frames)
+                    left_foot_z = np.zeros((step_frames))
+
+                elif foot == 1: #left foot
+                    left_foot_z = np.linspace(start_len, start_len + length, step_frames)
+                    left_knee_z = np.linspace(start_len, start_len + (3/4)*length, step_frames)
+                    right_knee_z = np.linspace(start_len, start_len + (1/4)*length, step_frames)
+                    upper_body_z = np.linspace(start_len, start_len + (1/2)*length, step_frames)
+                    right_foot_z = np.zeros((step_frames))
+
+                sample_z[start_frame_idx: start_frame_idx + step_frames, right_foot_idx] = right_foot_z[..., None]
+                sample_z[start_frame_idx: start_frame_idx + step_frames, left_foot_idx] = left_foot_z[..., None]
+                sample_z[start_frame_idx: start_frame_idx + step_frames, right_knee_idx] = right_knee_z[..., None]
+                sample_z[start_frame_idx: start_frame_idx + step_frames, left_knee_idx] = left_knee_z[..., None]
+                sample_z[start_frame_idx: start_frame_idx + step_frames, upper_body_idx] = upper_body_z[..., None]
 
                 start_frame_idx += step_frames
                 start_len = end_len
 
+        sample_num_frames = min(r.shape[0], max_frame)
+        r = r[:sample_num_frames]
         sample_feature = np.concatenate([sample_feature, sample_z[..., None]], axis=2)
         data[idx, :sample_num_frames] = sample_feature
 
