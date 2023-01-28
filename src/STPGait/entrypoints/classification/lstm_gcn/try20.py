@@ -8,8 +8,8 @@ from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, K
 from ....enums import Optim, Label
 from ....models import GCNLSTMTransformerV2
 from ....preprocess.main import PreprocessingConfig
-from .try4 import Entrypoint as E
-from .try2 import Entrypoint as EE
+from ..lstm_gcn_transformer.try4 import Entrypoint as E
+from ..lstm_gcn_transformer.try2 import Entrypoint as EE
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]

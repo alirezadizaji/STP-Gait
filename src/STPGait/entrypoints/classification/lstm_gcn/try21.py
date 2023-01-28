@@ -8,14 +8,14 @@ from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, K
 from ....enums import Optim, Label
 from ....models import GCNLSTMTransformerV2
 from ....preprocess.main import PreprocessingConfig
-from .try13 import Entrypoint as E
-from .try2 import Entrypoint as EE
+from ..lstm_gcn_transformer.try13 import Entrypoint as E
+from ..lstm_gcn_transformer.try2 import Entrypoint as EE
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
-# try 19 (try 13 ->)
-## Remove transformer
+# try 21 (try 13 ->)
+## Remove transformer and cnn part
 class Entrypoint(E):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(
@@ -28,7 +28,7 @@ class Entrypoint(E):
                 proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)))
             )
         config = BaseConfig(
-            try_num=19,
+            try_num=21,
             try_name="lstm_gcn",
             device="cuda:0",
             eval_batch_size=32,
@@ -38,4 +38,4 @@ class Entrypoint(E):
         super(EE, self).__init__(kfold, config)
     
     def get_model(self):
-        return GCNLSTMTransformerV2(transformer_encoder_conf=None)
+        return GCNLSTMTransformerV2(cnn_conf=None, transformer_encoder_conf=None)
