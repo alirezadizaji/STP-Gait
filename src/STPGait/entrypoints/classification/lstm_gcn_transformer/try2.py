@@ -59,8 +59,8 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
     def _calc_loss(self, x: OUT, data: IN) -> torch.Tensor:
         unsup_loss, sup_loss = x[1], x[2]
-        self.unsup_loss.append(unsup_loss)
-        self.sup_loss.append(sup_loss)
+        self.unsup_loss.append(unsup_loss.item())
+        self.sup_loss.append(sup_loss.item())
         return 0.2 * unsup_loss + sup_loss
 
     def _train_start(self) -> None:

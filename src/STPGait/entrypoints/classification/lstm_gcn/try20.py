@@ -8,13 +8,13 @@ from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, K
 from ....enums import Optim, Label
 from ....models import GCNLSTMTransformerV2
 from ....preprocess.main import PreprocessingConfig
-from ..lstm_gcn_transformer.try4 import Entrypoint as E
+from ..lstm_gcn_transformer.try7 import Entrypoint as E
 from ..lstm_gcn_transformer.try2 import Entrypoint as EE
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
-# try 20 (try 4 ->)
+# try 20 (try 7 ->)
 ## Remove transformer
 class Entrypoint(E):
     def __init__(self) -> None:
