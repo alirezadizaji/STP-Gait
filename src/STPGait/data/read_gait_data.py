@@ -1,12 +1,11 @@
 from dataclasses import dataclass
 import os
-from typing import Optional
 import pickle
 
 import numpy as np
 import pandas as pd
 
-from ..enums import WalkDirection
+from ..enums import Step, WalkDirection
 from ..preprocess import preprocessing
 from ..utils import timer
 from ..preprocess.main import PreprocessingConfig
@@ -52,6 +51,8 @@ def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl",
         sample_gait = gait_seq[idx]
 
         sample_z = np.zeros((sample_num_frames, num_nodes))
+
+        # Fill Z values using manual analysis :/
         if not config.fillZ_empty:
             # Seems like the first two steps is when the patient enters to the process :), since it is always NaN
             step_time = np.array(list(sample_gait['STime'].values()))[2:]
@@ -60,44 +61,51 @@ def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl",
 
             total_time = step_time.sum()
             num_frames_per_sec = sample_num_frames / total_time
-            start_frame_idx = 0
-            end_len = start_len = 0
+            # Frame zero always have Z = 0
+            start_frame_idx = 1
             
             # fill Z values
-            for length, time, foot in zip(step_len, step_time, step_foot):
+            for L, time, foot in zip(step_len, step_time, step_foot):
                 step_frames = int(time * num_frames_per_sec) + 1
                 
                 if step_frames + start_frame_idx > sample_num_frames:
                     step_frames = sample_num_frames - start_frame_idx
                 
-                start_len_rf = sample_feature[:,:,2][start_frame_idx - 1, Skeleton.RIGHT_FOOT]
-                start_len_rk = sample_feature[:,:,2][start_frame_idx - 1, Skeleton.RIGHT_KNEE]
-                start_len_lf = sample_feature[:,:,2][start_frame_idx - 1, Skeleton.LEFT_FOOT]
-                start_len_lk = sample_feature[:,:,2][start_frame_idx - 1, Skeleton.LEFT_KNEE]
-                start_len_ub = sample_feature[:,:,2][start_frame_idx - 1, Skeleton.UPPER_BODY]
+
+                start_len_rf = sample_z[start_frame_idx - 1, Skeleton.RIGHT_FOOT[0]]
+                start_len_rk = sample_z[start_frame_idx - 1, Skeleton.RIGHT_KNEE]
+                start_len_lf = sample_z[start_frame_idx - 1, Skeleton.LEFT_FOOT[0]]
+                start_len_lk = sample_z[start_frame_idx - 1, Skeleton.LEFT_KNEE]
+                start_len_ub = sample_z[start_frame_idx - 1, Skeleton.UPPER_BODY[0]]
                 
-                if foot == 0: #right foot
-                    right_foot_z = np.linspace(start_len_rf, start_len_rf + length, step_frames)
-                    right_knee_z = np.linspace(start_len_rk, start_len_rk + (3/4)*length, step_frames)
-                    left_knee_z = np.linspace(start_len_lk, start_len_lk + (1/4)*length, step_frames)
-                    upper_body_z = np.linspace(start_len_ub, start_len_ub + (1/2)*length, step_frames)
-                    left_foot_z = np.zeros((step_frames))
+                ub_step = 0.5 * L
+                if foot == Step.RIGHT:
+                    lf_step = 0
+                    lk_step = 0.25 * L
+                    rk_step = 0.75 * L
+                    rf_step = L
+                elif foot == Step.LEFT:
+                    rf_step = 0
+                    rk_step = 0.25 * L
+                    lk_step = 0.75 * L
+                    lf_step = L
+                else:
+                    raise ValueError()
 
-                elif foot == 1: #left foot
-                    left_foot_z = np.linspace(start_len_lf, start_len_lf + length, step_frames)
-                    left_knee_z = np.linspace(start_len_lk, start_len_lk + (3/4)*length, step_frames)
-                    right_knee_z = np.linspace(start_len_rk, start_len_rk + (1/4)*length, step_frames)
-                    upper_body_z = np.linspace(start_len_ub, start_len_ub + (1/2)*length, step_frames)
-                    right_foot_z = np.zeros((step_frames))
-
-                sample_z[start_frame_idx: start_frame_idx + step_frames, Skeleton.RIGHT_FOOT] = right_foot_z[..., None]
-                sample_z[start_frame_idx: start_frame_idx + step_frames, Skeleton.LEFT_FOOT] = left_foot_z[..., None]
-                sample_z[start_frame_idx: start_frame_idx + step_frames, Skeleton.RIGHT_KNEE] = right_knee_z[..., None]
-                sample_z[start_frame_idx: start_frame_idx + step_frames, Skeleton.LEFT_KNEE] = left_knee_z[..., None]
-                sample_z[start_frame_idx: start_frame_idx + step_frames, Skeleton.UPPER_BODY] = upper_body_z[..., None]
+                upper_body_z = np.linspace(start_len_ub, start_len_ub + ub_step, step_frames)
+                left_foot_z = np.linspace(start_len_lf, start_len_lf + lf_step, step_frames)
+                left_knee_z = np.linspace(start_len_lk, start_len_lk + lk_step, step_frames)
+                right_knee_z = np.linspace(start_len_rk, start_len_rk + rk_step, step_frames)
+                right_foot_z = np.linspace(start_len_rf, start_len_rf + rf_step, step_frames)
+                
+                ST, ET = start_frame_idx, start_frame_idx + step_frames
+                sample_z[ST: ET, Skeleton.RIGHT_FOOT] = right_foot_z[..., None]
+                sample_z[ST: ET, Skeleton.LEFT_FOOT] = left_foot_z[..., None]
+                sample_z[ST: ET, Skeleton.RIGHT_KNEE] = right_knee_z[..., None]
+                sample_z[ST: ET, Skeleton.LEFT_KNEE] = left_knee_z[..., None]
+                sample_z[ST: ET, Skeleton.UPPER_BODY] = upper_body_z[..., None]
 
                 start_frame_idx += step_frames
-                start_len = end_len
 
         eligible_num_frames = min(r.shape[0], max_frame)
         sample_feature = np.concatenate([sample_feature, sample_z[..., None]], axis=2)

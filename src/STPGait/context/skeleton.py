@@ -10,12 +10,15 @@ class Skeleton:
     CENTER: int = 8
     LEFT_HEAP: int = 12
     LEFT_KNEE: int = 13
+    RIGHT_KNEE: int = 10
     num_nodes: int = 25
 
     HEAD_EYES_EARS: np.ndarray = np.array([0, 15, 16, 17, 18])
     SHOULDERS: np.ndarray = np.array([2, 5])
     ELBOWS_HANDS: np.ndarray = np.array([3, 4, 6, 7])
 
+    LEFT_FOOT: np.ndarray = np.array([14, 19, 20, 21])
+    RIGHT_FOOT: np.ndarray = np.array([11, 22, 23, 24])
     FOOTS: np.ndarray = np.array([19, 20, 21, 22, 23, 24])
     WRISTS_FOOTS: np.ndarray = np.array([11, 14])
     WHOLE_FOOT: np.ndarray = np.concatenate((FOOTS, WRISTS_FOOTS))
@@ -26,10 +29,6 @@ class Skeleton:
     CRITICAL: np.ndarray = np.concatenate((ELBOWS_HANDS, NECK_TO_KNEE, WRISTS_FOOTS))
 
     UPPER_BODY: np.ndarray = np.array([8, 9, 12, 1, 2, 3, 4, 5, 6, 7, 0, 15, 16, 17, 18])
-    LEFT_FOOT: np.ndarray = np.array([14, 20, 21])
-    LEFT_KNEE: np.ndarray = np.array([13])
-    RIGHT_FOOT: np.ndarray = np.array([11, 23, 24])
-    RIGHT_KNEE: np.ndarray = np.array([10])
 
     _one_direction_edges: np.ndarray = np.array([
         [0, 15], [0, 16], [15, 17], [16, 18], [0, 1],
