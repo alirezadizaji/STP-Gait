@@ -1,3 +1,5 @@
+import torch
+
 from ....config import BaseConfig, TrainingConfig
 from ....context import Skeleton
 from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
@@ -28,6 +30,8 @@ class Entrypoint(E):
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
         super(E, self).__init__(kfold, config)
+
+        self._edge_index: torch.Tensor = None
 
     def _get_edges(self, num_frames: int):
         return Skeleton.get_simple_interframe_edges(num_frames, dilation=30, use_lower_part=True)
