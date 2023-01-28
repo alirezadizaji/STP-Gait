@@ -9,7 +9,8 @@ from matplotlib.animation import FuncAnimation
 from typing_extensions import Protocol
 
 from ..context import Skeleton
-from ..data import proc_gait_data
+from ..data import proc_gait_data, ProcessingGaitConfig
+from ..preprocess.main import PreprocessingConfig
 from ..utils import stdout_stderr_setter
 
 
@@ -24,17 +25,11 @@ def initializer(work_dir: str) -> Func:
     def visualize_samples(raw: np.ndarray, processed: np.ndarray, labels: np.ndarray, 
             names: np.ndarray) -> None:
 
-        # Swap Y-Z axis for just visualization
-        raw[..., [1, 2]] = raw[..., [2, 1]]
-        processed[..., [1, 2]] = processed[..., [2, 1]]
-
         T = raw.shape[1]
-        raw_maxes, raw_mines = raw.max((0, 1, 2)), raw.min((0, 1, 2))
-        processed_maxes, processed_mines = processed.max((0, 1, 2)), processed.min((0, 1, 2))
 
         def _pre_setting_ax(ax, maxes, mines):
             ax.clear()
-            ax.view_init(elev=5, azim=-87)
+            ax.view_init(elev=-86, azim=89)
 
             ax.set_xlim([mines[0], maxes[0]])
             ax.set_xlabel('$X$')
@@ -49,8 +44,8 @@ def initializer(work_dir: str) -> Func:
             ax.set_zticks([mines[2], (mines[2] + maxes[2]) / 2, maxes[2]])
         
         def animate(skeleton):
-            raw, processed = np.array_split(skeleton, 2, axis=0)
-            raw, processed = raw[0], processed[0]
+            raw_skeleton, processed_skeleton = np.array_split(skeleton, 2, axis=0)
+            raw_skeleton, processed_skeleton = raw_skeleton[0], processed_skeleton[0]
 
             frame_index = skeleton_index[0]
             _pre_setting_ax(axl, raw_maxes, raw_mines)
@@ -60,8 +55,8 @@ def initializer(work_dir: str) -> Func:
             plt.suptitle(f'Skeleton {index} Frame #{frame_index} of {T} (label: {label})')
             
             for e in Skeleton._one_direction_edges.T:
-                rjoint_locs = raw[e]
-                pjoint_locs = processed[e]
+                rjoint_locs = raw_skeleton[e]
+                pjoint_locs = processed_skeleton[e]
 
                 # plot them
                 axl.plot(rjoint_locs[:, 0],rjoint_locs[:, 1],rjoint_locs[:, 2], color='blue')
@@ -77,6 +72,10 @@ def initializer(work_dir: str) -> Func:
             fig = plt.figure()
             axl = fig.add_subplot(1, 2, 1, projection='3d')
             axr = fig.add_subplot(1, 2, 2, projection='3d')
+
+            raw_maxes, raw_mines = raw_skeleton.max((0, 1)), raw_skeleton.min((0, 1))
+            processed_maxes, processed_mines = proc_skeleton.max((0, 1)), proc_skeleton.min((0, 1))
+
             _pre_setting_ax(axl, raw_maxes, raw_mines)
             _pre_setting_ax(axr, processed_maxes, processed_mines)
 
@@ -98,6 +97,9 @@ def get_parser():
     parser = ArgumentParser(description='GAIT Skeleton Visualizer.')
     parser.add_argument('-L', '--load-path', type=str, help='Path to load and process (if not exist) the raw data')
     parser.add_argument('-S', '--save-dir', type=str, help='directory to save the processed file')
+    parser.add_argument('-F', '--filename', type=str, help='filename to save the processed data.')
+    parser.add_argument('-S2', '--save-dir2', type=str, help='directory to save (2nd) the processed file. This is suitable to compare processed (2nd) with raw data (1st).')
+    parser.add_argument('-F2', '--filename2', type=str, help='filename to save (2nd) the processed data.')
     parser.add_argument('-D', '--save-vis-dir', type=str, help='directory to save 3D visualizations')
     args = parser.parse_args()
     return args
@@ -113,8 +115,9 @@ def run_main():
         save_path = os.path.join(save_dir, filename)
         if not os.path.exists(save_path):
             proc_gait_data(args.load_path, save_dir, filename=filename,
-                critical_limit=critical_limit, non_critical_limit=non_critical_limit)
-        
+                config=ProcessingGaitConfig(fillZ_empty=False, 
+                    preprocessing_conf=PreprocessingConfig(critical_limit=critical_limit, non_critical_limit=non_critical_limit))
+            )
         with open(save_path, "rb") as f:
             import pickle
             data, labels, names, hard_cases_id = pickle.load(f)
@@ -128,11 +131,11 @@ def run_main():
 
         return data, labels, names, hard_cases_id
     
-    raw, labels, names1, _ = _read_data(args.save_dir, "raw_vis.pkl", critical_limit = 0, non_critical_limit = 0)
-    processed, _, names2, _ = _read_data("../Results/1_transformer/encoder_based/0/", "output.pkl", critical_limit = None, non_critical_limit = None)
+    raw, labels, names1, _ = _read_data(args.save_dir, args.filename, critical_limit = 120, non_critical_limit = None)
+    processed, _, names2, _ = _read_data(args.save_dir2, args.filename2, critical_limit = None, non_critical_limit = None)
 
     mask1 = np.zeros(raw.shape[0], dtype=np.bool)
-    mask2 = np.zeros(processed.shape[0], dtype=np.bool)
+    mask2 = np.zeros(raw.shape[0], dtype=np.bool)
 
     for i1, n1 in enumerate(names1):
         for i2, n2 in enumerate(names2):

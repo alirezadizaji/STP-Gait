@@ -101,15 +101,15 @@ def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl",
                 ST, ET = start_frame_idx, start_frame_idx + step_frames
                 sample_z[ST: ET, Skeleton.RIGHT_FOOT] = right_foot_z[..., None]
                 sample_z[ST: ET, Skeleton.LEFT_FOOT] = left_foot_z[..., None]
-                sample_z[ST: ET, Skeleton.RIGHT_KNEE] = right_knee_z[..., None]
-                sample_z[ST: ET, Skeleton.LEFT_KNEE] = left_knee_z[..., None]
+                sample_z[ST: ET, Skeleton.RIGHT_KNEE] = right_knee_z
+                sample_z[ST: ET, Skeleton.LEFT_KNEE] = left_knee_z
                 sample_z[ST: ET, Skeleton.UPPER_BODY] = upper_body_z[..., None]
 
                 start_frame_idx += step_frames
 
         eligible_num_frames = min(r.shape[0], max_frame)
         sample_feature = np.concatenate([sample_feature, sample_z[..., None]], axis=2)
-        data[idx, :eligible_num_frames] = sample_feature
+        data[idx, :eligible_num_frames] = sample_feature[:eligible_num_frames]
 
     # Revert walk direction when going away from the camera
     away_idxs = np.nonzero(walk_directions == WalkDirection.AWAY)
