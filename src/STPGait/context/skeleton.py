@@ -26,9 +26,9 @@ class Skeleton:
     CRITICAL: np.ndarray = np.concatenate((ELBOWS_HANDS, NECK_TO_KNEE, WRISTS_FOOTS))
 
     UPPER_BODY: np.ndarray = np.array([8, 9, 12, 1, 2, 3, 4, 5, 6, 7, 0, 15, 16, 17, 18])
-    LEFT_FOOT: np.ndarray = np.array([14, 20, 21])
+    LEFT_FOOT: np.ndarray = np.array([14, 20, 21, 22])
     LEFT_KNEE: np.ndarray = np.array([13])
-    RIGHT_FOOT: np.ndarray = np.array([11, 23, 24])
+    RIGHT_FOOT: np.ndarray = np.array([11, 23, 24, 19])
     RIGHT_KNEE: np.ndarray = np.array([10])
 
     _one_direction_edges: np.ndarray = np.array([
