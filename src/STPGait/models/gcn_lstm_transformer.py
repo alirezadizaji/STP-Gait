@@ -63,8 +63,8 @@ class GCNLSTMTransformer(nn.Module):
             fc_hidden: int = 50,
             lstm_conf: LSTMConfig = LSTMConfig(), 
             gcn_conf: GCNLayerConfig = GCNLayerConfig(),
-            cnn_conf: CNNConf = CNNConf(),
-            transformer_encoder_conf: TransformerEncoderConf = TransformerEncoderConf(),
+            cnn_conf: Optional[CNNConf] = CNNConf(),
+            transformer_encoder_conf: Optional[TransformerEncoderConf] = TransformerEncoderConf(),
             loss1: Callable[..., torch.Tensor] = lambda x, y: nn.MSELoss()(x, y),
             loss2: Callable[..., torch.Tensor] = lambda x, y: - torch.mean(x[torch.arange(x.size(0)), y]),
             ratio_to_apply_loss1: float = 0.2,
@@ -72,9 +72,7 @@ class GCNLSTMTransformer(nn.Module):
             init_lstm_hidden_state: Protocol1 = lambda lstm_num_layer, batch_size, hidden_size: torch.randn(lstm_num_layer, batch_size, hidden_size)) -> None:
 
         super().__init__()
-        cnn_conf = cnn_conf.__dict__
         self.gcn_conf = gcn_conf.__dict__
-        transformer_encoder_conf = transformer_encoder_conf.__dict__
         self.lstm_conf = lstm_conf.__dict__
         
         self.get_gcn_edges = get_gcn_edges
@@ -101,15 +99,23 @@ class GCNLSTMTransformer(nn.Module):
         )
         self.loss1 = loss1
 
-        self.conv = nn.Conv1d(**cnn_conf)
+        if cnn_conf is not None:
+            cnn_conf = cnn_conf.__dict__
+            self.conv = nn.Conv1d(**cnn_conf)
+        else:
+            self.conv = None
 
-        encoder_layer = nn.TransformerEncoderLayer(
-            d_model=fc_hidden,
-            nhead=transformer_encoder_conf['enc_n_heads'])        
-        self.encoder = nn.TransformerEncoder(
-            encoder_layer=encoder_layer,
-            num_layers=transformer_encoder_conf['n_enc_layers'], 
-            norm=None)
+        if transformer_encoder_conf is not None:
+            transformer_encoder_conf = transformer_encoder_conf.__dict__
+            encoder_layer = nn.TransformerEncoderLayer(
+                d_model=fc_hidden,
+                nhead=transformer_encoder_conf['enc_n_heads'])        
+            self.encoder = nn.TransformerEncoder(
+                encoder_layer=encoder_layer,
+                num_layers=transformer_encoder_conf['n_enc_layers'], 
+                norm=None)
+        else:
+            self.encoder = None
 
         self.pool = nn.AdaptiveAvgPool1d((1,))
         self.fc_classfier = nn.Sequential(
@@ -132,7 +138,7 @@ class GCNLSTMTransformer(nn.Module):
     def _update_lstm_hidden_state(self, lstm_idx: int, h: torch.Tensor, c: torch.Tensor) -> None:
         pass
 
-    def _calc_edge_attr(self, node_valid: Optional[torch.Tensor]=None) -> Optional[torch.Tensor]:
+    def _calc_edge_weight(self, node_valid: Optional[torch.Tensor]=None) -> Optional[torch.Tensor]:
         if node_valid is None:
             return None
         
@@ -168,7 +174,7 @@ class GCNLSTMTransformer(nn.Module):
             x1 = x1.reshape(N, T, -1, D)
             
             if x_valid is not None:
-                data = Batch.from_data_list([Data(x=x_.reshape(-1, D), edge_index=self.edge_index, edge_weight=self._calc_edge_attr(xv_)) for x_, xv_ in zip(x1, x_valid)])
+                data = Batch.from_data_list([Data(x=x_.reshape(-1, D), edge_index=self.edge_index, edge_weight=self._calc_edge_weight(xv_)) for x_, xv_ in zip(x1, x_valid)])
             else:
                 data = Batch.from_data_list([Data(x=x_.reshape(-1, D), edge_index=self.edge_index) for x_ in x1])
             x1 = gcn(data)
@@ -185,8 +191,11 @@ class GCNLSTMTransformer(nn.Module):
         idx2 = torch.randint(0, x_b1.size(1) - 1, size=(x_b1.size(0), size))
         loss1 = self.loss1(x_b1[idx1, idx2], x[idx1, idx2 + 1])
 
-        x1 = self.conv(x1)
-        x1 = self.encoder(x1)
+        if self.conv is not None:
+            x1 = self.conv(x1)
+        if self.encoder is not None:
+            x1 = self.encoder(x1)
+            
         x1 = self.fc_classfier(x1)
         loss2 = self.loss2(x1, y)
 

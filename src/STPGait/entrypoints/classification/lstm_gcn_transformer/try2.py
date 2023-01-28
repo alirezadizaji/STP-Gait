@@ -41,7 +41,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
     @property
     def criteria_names(self) -> List[str]:
-        return super().criteria_names + ['ACC']
+        return super().criteria_names + ['ACC', 'ULOSS', 'SLOSS']
     
     @property
     def best_epoch_criterion_idx(self) -> int:
@@ -58,12 +58,17 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         return x
 
     def _calc_loss(self, x: OUT, data: IN) -> torch.Tensor:
-        loss1, loss2 = x[1], x[2]
-        return 0.2 * loss1 + loss2
+        unsup_loss, sup_loss = x[1], x[2]
+        self.unsup_loss.append(unsup_loss)
+        self.sup_loss.append(sup_loss)
+        return 0.2 * unsup_loss + sup_loss
 
     def _train_start(self) -> None:
         self.correct = self.total = 0
         self.losses = list()
+
+        self.unsup_loss = list()
+        self.sup_loss = list()
 
     def _eval_start(self) -> None:
         self._train_start()
@@ -92,16 +97,18 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
     def _train_epoch_end(self) -> np.ndarray:
         loss = np.mean(self.losses)
+        uloss, sloss = np.mean(self.unsup_loss), np.mean(self.sup_loss)
         acc = self.correct / self.total
         print(f'epoch{self.epoch} loss value {loss} acc {acc}', flush=True)
 
-        return np.array([loss, acc])
+        return np.array([loss, acc, uloss, sloss])
     
     def _eval_epoch_end(self, datasep: Separation) -> np.ndarray:
         acc = self.correct / self.total
         loss = np.mean(self.losses)
+        loss1, loss2 = np.mean(self.unsup_loss), np.mean(self.sup_loss)
         print(f'epoch {self.epoch} separation {datasep} loss value {loss} acc {acc}', flush=True)
-        return np.array([loss, acc])
+        return np.array([loss, acc, loss1, loss2])
 
     def best_epoch_criteria(self, best_epoch: int) -> bool:
         val = self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch, self.best_epoch_criterion_idx]
