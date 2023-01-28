@@ -117,11 +117,14 @@ class GCNLSTMTransformer(nn.Module):
         else:
             self.encoder = None
 
-        self.pool = nn.AdaptiveAvgPool1d((1,))
+        if cnn_conf is not None:
+            h1 = fc_hidden * cnn_conf["out_channels"]
+        else:
+            h1 = fc_hidden
         self.fc_classfier = nn.Sequential(
             nn.Dropout(0.2),
             nn.Flatten(1),
-            nn.Linear(fc_hidden*cnn_conf["out_channels"], fc_hidden),
+            nn.Linear(h1, fc_hidden),
             nn.ReLU(),
             nn.Linear(fc_hidden, num_classes),
             nn.LogSoftmax(dim=1),
@@ -195,7 +198,7 @@ class GCNLSTMTransformer(nn.Module):
             x1 = self.conv(x1)
         if self.encoder is not None:
             x1 = self.encoder(x1)
-            
+
         x1 = self.fc_classfier(x1)
         loss2 = self.loss2(x1, y)
 
