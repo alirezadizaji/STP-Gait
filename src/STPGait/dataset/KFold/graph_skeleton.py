@@ -6,7 +6,7 @@ from .skeleton import SkeletonKFoldConfig, SkeletonKFoldOperator
 from ..graph_skeleton import GraphSkeletonDataset
 from ...enums import Separation
 
-class GraphSkeletonKFoldOperator(SkeletonKFoldOperator[SkeletonKFoldConfig, SkeletonKFoldConfig]):
+class GraphSkeletonKFoldOperator(SkeletonKFoldOperator[GraphSkeletonDataset, SkeletonKFoldConfig]):
     r""" KFold for Graph Skeleton Dataset """
 
     def set_sets(self, train_indices: np.ndarray, val_indices: np.ndarray, 

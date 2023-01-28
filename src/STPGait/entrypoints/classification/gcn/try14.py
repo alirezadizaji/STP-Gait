@@ -44,6 +44,8 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         )
         super().__init__(kfold, config)
 
+        self._edge_index: torch.Tensor = None
+
     def get_model(self) -> nn.Module:
         num_classes = self.kfold._ulabels.size
         model = GCN_3l_BN(model_level='graph', dim_node=2, dim_hidden=60, num_classes=num_classes)
@@ -54,9 +56,11 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
     def _model_forwarding(self, data: IN) -> OUT:
         x = data[0][..., [0, 1]] # Use X-Y features
-        edge_index = self._get_edges(x.size(1))
+
+        if self._edge_index is None:
+            self._edge_index = self._get_edges(x.size(1))
         x = x.flatten(1, -2) # N, T*V, D
-        data = Batch.from_data_list([Data(x=x_, edge_index=edge_index) for x_ in x])
+        data = Batch.from_data_list([Data(x=x_, edge_index=self._edge_index) for x_ in x])
         data = data.to(x.device)
         out: OUT = self.model(data=data)
         return out
