@@ -23,7 +23,7 @@ class Entrypoint(E):
                 proc_conf=ProcessingGaitConfig(fillZ_empty=False, preprocessing_conf=PreprocessingConfig(critical_limit=120)))
             )
         config = BaseConfig(
-            try_num=28,
+            try_num=32,
             try_name="gcn_non_temporal",
             device="cuda:0",
             eval_batch_size=1,
