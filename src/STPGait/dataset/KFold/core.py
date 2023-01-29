@@ -51,7 +51,7 @@ class KFoldOperator(ABC, Generic[T]):
             ignore_mask = ignore_mask.sum(1) > 0
 
         self._ulabels = np.unique(labels[~ignore_mask])
-        self._numeric_labels = np.full_like(labels, fill_value=-np.inf)
+        self._numeric_labels = np.full(labels.size, fill_value=-np.inf)
 
         for i, l in enumerate(self._ulabels):
             l_idxs = np.nonzero(labels == l)
