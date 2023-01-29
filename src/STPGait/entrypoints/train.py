@@ -198,7 +198,7 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
         for self.epoch in tqdm(range(num_epochs)):
             self._train_for_one_epoch()
             self._validate_for_one_epoch(Separation.VAL, self.val_loader)
-            val = self._criteria_vals[1, self.epoch, self.best_epoch_criterion_idx]
+            val = self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch, self.best_epoch_criterion_idx]
             
             # save only best epoch in terms of validation accuracy             
             if best_epoch is None or self.best_epoch_criteria(best_epoch):
