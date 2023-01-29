@@ -30,6 +30,6 @@ class Entrypoint(E):
             save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
-        TrainEntrypoint.__init__(kfold, config)
+        TrainEntrypoint.__init__(self, kfold, config)
 
         self._edge_index: torch.Tensor = None
