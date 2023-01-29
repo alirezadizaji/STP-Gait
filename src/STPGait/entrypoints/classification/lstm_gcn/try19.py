@@ -9,7 +9,7 @@ from ....enums import Optim, Label
 from ....models import GCNLSTMTransformerV2
 from ....preprocess.main import PreprocessingConfig
 from ..lstm_gcn_transformer.try13 import Entrypoint as E
-from ..lstm_gcn_transformer.try2 import Entrypoint as EE
+from ...train import TrainEntrypoint
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
@@ -35,7 +35,7 @@ class Entrypoint(E):
             save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
-        super(EE, self).__init__(kfold, config)
+        TrainEntrypoint.__init__(kfold, config)
     
     def get_model(self):
         return GCNLSTMTransformerV2(transformer_encoder_conf=None)

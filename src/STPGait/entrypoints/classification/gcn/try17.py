@@ -7,6 +7,7 @@ from ....data.read_gait_data import ProcessingGaitConfig
 from ....enums import Optim
 from ....preprocess.main import PreprocessingConfig
 from .try14 import Entrypoint as E
+from ...train import TrainEntrypoint
 
 # try 17 (try 14 ->)
 ## Applying inter-frame edge connection using mode 2 with chunk size 60 and stride 30
@@ -29,7 +30,7 @@ class Entrypoint(E):
             save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
-        super(E, self).__init__(kfold, config)
+        TrainEntrypoint.__init__(kfold, config)
 
         self._edge_index: torch.Tensor = None
 
