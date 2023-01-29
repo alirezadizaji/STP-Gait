@@ -16,6 +16,7 @@ class KFoldConfig:
     init_testK: int = 1
     remove_labels: List[str] = field(default_factory=list)
 
+IGNORE = "IgNoRe"
 
 class KFoldOperator(ABC, Generic[T]):
     r""" It initializes the train/test/validation sets, using KFold strategy.
@@ -30,7 +31,6 @@ class KFoldOperator(ABC, Generic[T]):
         Each validation and test sets will get 1/K partial of the whole dataset.
     """
     def __init__(self, K:int = 10, init_valK: int = 0, init_testK: int = 1, remove_labels: List[str] = list()) -> None:
-
         self.K = K
         self._init_valK = init_valK
         self.valK = self._init_valK
@@ -45,19 +45,21 @@ class KFoldOperator(ABC, Generic[T]):
         labels = self.get_labels()
         num_samples = labels.size
         
+        ignore_mask = np.zeros_like(labels, dtype=np.bool)
         if remove_labels:
-            mask = np.ones_like(labels, dtype=np.bool)
-            for i, l in enumerate(labels):
-                if l in remove_labels:
-                    mask[i] = False
-            labels = labels[mask]
-        
-        print(f"### {labels.size} out of {num_samples} remained after removing `{remove_labels}` ###", flush=True)
+            ignore_mask = labels[:, np.newaxis] == np.array(remove_labels)[np.newaxis, :]
+            ignore_mask = ignore_mask.sum(1) > 0
 
-        self._ulabels, self._label_indices = np.unique(labels, return_inverse=True)
-        for i in range(self._ulabels.size):
-            l_idxs = np.nonzero(self._label_indices == i)
+        self._ulabels = np.unique(labels[~ignore_mask])
+        self._numeric_labels = np.full_like(labels, fill_value=-np.inf)
+
+        for i, l in enumerate(self._ulabels):
+            l_idxs = np.nonzero(labels == l)
+            self._numeric_labels[l_idxs] = i
             self._label_to_splits[i] = np.array_split(l_idxs[0], K)
+        
+        remained = (~ignore_mask).sum()
+        print(f"### {remained} out of {num_samples} remained after removing `{remove_labels}`. Remained labels: `{self._ulabels}` ###", flush=True)
 
     @abstractmethod
     def get_labels(self) -> np.ndarray:

@@ -144,9 +144,9 @@ class SkeletonKFoldOperator(KFoldOperator[TT], Generic[TT, C]):
             test_indices: np.ndarray) -> Dict[Separation, SkeletonDataset]:
         sets: Dict[Separation, SkeletonDataset] = dict()
         sets[Separation.VAL] = SkeletonDataset(self._x[val_indices], self._names[val_indices], 
-            self._label_indices[val_indices], self._mask[val_indices])
+            self._numeric_labels[val_indices], self._mask[val_indices])
         sets[Separation.TEST] = SkeletonDataset(self._x[test_indices], self._names[test_indices], 
-            self._label_indices[test_indices], self._mask[test_indices])
+            self._numeric_labels[test_indices], self._mask[test_indices])
         
         # Train dataset should not have missed frames at all.
         train_not_missed = ~self._mask[train_indices]
@@ -159,6 +159,6 @@ class SkeletonKFoldOperator(KFoldOperator[TT], Generic[TT, C]):
         
         self._x[train_indices] = pad_empty_frames(new_x)
         sets[Separation.TRAIN] = SkeletonDataset(self._x[train_indices], self._names[train_indices], 
-                self._label_indices[train_indices])
+                self._numeric_labels[train_indices])
         
         return sets
