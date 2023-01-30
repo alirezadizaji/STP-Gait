@@ -40,7 +40,8 @@ class Entrypoint(E):
 
     def get_model(self) -> nn.Module:
         num_classes = self.kfold._ulabels.size
-        return GCNTransformer(model_level="graph", dim_node=2, dim_hidden=60, num_classes=num_classes)
+        return GCNTransformer(model_level="graph", dim_node=2, num_nodes=25, dim_hidden=60, 
+            num_classes=num_classes)
 
     def _model_forwarding(self, data):
         x = data[0][..., [0, 1]] # Use X-Y features

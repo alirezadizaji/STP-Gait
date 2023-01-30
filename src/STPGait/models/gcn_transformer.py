@@ -24,10 +24,13 @@ class GCNTransformer(GCN_3l_BN):
                 encoder_layer=encoder_layer,
                 num_layers=transformer_encoder_conf['n_enc_layers'], 
                 norm=None)
-    
+
+        self.V = num_nodes
+
     def forward(self, data: List[Data]) -> torch.Tensor:
         N = len(data)
-        T, V, _ = data[0].x.shape
+        L, _ = data[0].x.shape
+        T = L // self.V
 
         with torch.no_grad():
             X: Batch = Batch.from_data_list(data)
@@ -37,8 +40,8 @@ class GCNTransformer(GCN_3l_BN):
         for conv, relu in zip(self.convs, self.relus):
             post_conv = relu(conv(post_conv, edge_index))
         
-        post_conv = post_conv.reshape(N, T, V, -1)
-        assert post_conv.size(1) == T and post_conv.size(2) == V, "Shape mismatch."
+        post_conv = post_conv.reshape(N, T, self.V, -1)
+        assert post_conv.size(1) == T and post_conv.size(2) == self.V, "Shape mismatch."
         
         post_conv = post_conv.reshape(N, T, -1)  # N, T, V*D
         post_conv = self.encoder(post_conv)
