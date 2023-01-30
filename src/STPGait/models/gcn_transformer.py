@@ -45,7 +45,7 @@ class GCNTransformer(GCN_3l_BN):
         
         post_conv = post_conv.reshape(N, T, -1)  # N, T, V*D
         post_conv = self.encoder(post_conv)
-        post_conv = post_conv.rehsape(N, T, V, -1).reshape(N*T*V, -1)
+        post_conv = post_conv.reshape(N, T, self.V, -1).reshape(N*T*self.V, -1)
 
         out_readout = self.readout(post_conv, batch)
         out = self.ffn(out_readout)
