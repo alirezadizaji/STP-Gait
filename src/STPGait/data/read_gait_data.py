@@ -64,9 +64,14 @@ def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl",
             # Frame zero always have Z = 0
             start_frame_idx = 1
             
+            wd = walk_directions[idx]
+
             # fill Z values
             for L, time, foot in zip(step_len, step_time, step_foot):
                 step_frames = int(time * num_frames_per_sec) + 1
+
+                if wd == WalkDirection.AWAY:
+                    L = -L
                 
                 if step_frames + start_frame_idx > sample_num_frames:
                     step_frames = sample_num_frames - start_frame_idx
@@ -114,8 +119,8 @@ def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl",
     data, hard_cases_id = preprocessing(data, config.preprocessing_conf)
 
     # Revert walk direction when going away from the camera
-    away_idxs = np.nonzero(walk_directions == WalkDirection.AWAY)
-    data[away_idxs, ..., 2] = data[away_idxs, ..., 2].max((1, 2)) - data[away_idxs, ..., 2]
+    away_idxs = np.nonzero(walk_directions == WalkDirection.AWAY)[0]
+    data[away_idxs, ..., 2] = data[away_idxs, ..., 2] - data[away_idxs, ..., 2].min((1, 2), keepdims=True)
     
     with open(os.path.join(save_dir, filename), 'wb') as f:
         pickle.dump((data, labels, names, np.array(hard_cases_id)), f)
