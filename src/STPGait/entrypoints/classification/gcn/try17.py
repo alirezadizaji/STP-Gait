@@ -17,7 +17,6 @@ class Entrypoint(E):
             config=SkeletonKFoldConfig(
                 kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0),
                 load_dir="../../Data/output_1.pkl",
-                filterout_unlabeled=True,
                 filterout_hardcases=True,
                 savename="processed_120c.pkl",
                 proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)))

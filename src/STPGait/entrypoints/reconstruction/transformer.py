@@ -13,16 +13,15 @@ from ...enums import Optim, Separation
 from ...models.transformer import SimpleTransformer
 from ..train import TrainEntrypoint
 
-IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, np.ndarray]
+IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, np.ndarray, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor]
 
 class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
     def __init__(self) -> None:
         kfold = SkeletonKFoldOperator[SkeletonDataset, SkeletonKFoldConfig](
             config=SkeletonKFoldConfig(
-                kfold_config=KFoldConfig(K=10, init_valK=0, init_testK=1),
-                load_dir="../../Data/output_1.pkl",
-                filterout_unlabeled=False)
+                kfold_config=KFoldConfig(K=10, init_valK=0, init_testK=1, filterout_unlabeled=False),
+                load_dir="../../Data/output_1.pkl")
             )
         config = BaseConfig(
             try_num=1,

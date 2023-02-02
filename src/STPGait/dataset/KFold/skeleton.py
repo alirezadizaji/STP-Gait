@@ -19,7 +19,6 @@ class SkeletonKFoldConfig:
     savename: str = "processed.pkl"
     proc_conf: ProcessingGaitConfig = ProcessingGaitConfig()
     filterout_hardcases: bool = False
-    filterout_unlabeled: bool = True
 
 TT = TypeVar('TT', bound=SkeletonDataset)
 C = TypeVar('C', bound=SkeletonKFoldConfig)
@@ -64,11 +63,6 @@ class SkeletonKFoldOperator(KFoldOperator[TT], Generic[TT, C]):
             x, labels, names = _masking(x, labels, names, mask)
             print(f"### SkeletonKFoldOperator (Filtering hard cases): x shape {x.shape} ###", flush=True)
 
-        if self.conf.filterout_unlabeled:
-            mask = labels != 'unlabeled'
-            x, labels, names = _masking(x, labels, names, mask)
-            print(f"### SkeletonKFoldOperator (Filtering unlabeled samples): x shape {x.shape} ###", flush=True)
-        
         values, counts = np.unique(labels, return_counts=True)
         v_to_c = {v: c for v, c in zip(values, counts)}
         print(f"### Labels counts (after pruning): {v_to_c} ###", flush=True)
@@ -80,13 +74,13 @@ class SkeletonKFoldOperator(KFoldOperator[TT], Generic[TT, C]):
         self._labels = labels[indices]
         self._names = names[indices]
         self._hard_cases_id = hard_cases_id
-        self._node_invalidity = self._generate_missed_frames()
-        self._mask = self._node_invalidity.sum(2) > 0
+        self._node_invalidity = self._get_node_invalidity()
+        self._frame_invalidity = self._node_invalidity.sum(2) > 0
 
-        super().__init__(**self.conf.kfold_config.__dict__)
+        KFoldOperator().__init__(**self.conf.kfold_config.__dict__)
 
-    def _generate_missed_frames(self) -> np.ndarray:
-        """ It generates a mask, determining whether a frame is missed or not. It verifies
+    def _get_node_invalidity(self) -> np.ndarray:
+        """ It generates a mask, determining whether a node within a frame is missed or not. It verifies
         this by measuring the ratio distance of joints with respect to the center, heap, and knee 
         joints both vertically and horizontally.
 
@@ -140,16 +134,25 @@ class SkeletonKFoldOperator(KFoldOperator[TT], Generic[TT, C]):
     def get_labels(self) -> np.ndarray:
         return self._labels
 
+    def get_labeled_mask(self) -> np.ndarray:
+        return self.get_labels() != "unlabeled"
+
     def set_sets(self, train_indices: np.ndarray, val_indices: np.ndarray, 
             test_indices: np.ndarray) -> Dict[Separation, SkeletonDataset]:
+        
         sets: Dict[Separation, SkeletonDataset] = dict()
+        labeled = self.get_labeled_mask()
+
         sets[Separation.VAL] = SkeletonDataset(self._x[val_indices], self._names[val_indices], 
-            self._numeric_labels[val_indices], self._mask[val_indices])
+            self._numeric_labels[val_indices], labeled[val_indices], 
+            self._frame_invalidity[val_indices])
+        
         sets[Separation.TEST] = SkeletonDataset(self._x[test_indices], self._names[test_indices], 
-            self._numeric_labels[test_indices], self._mask[test_indices])
+            self._numeric_labels[test_indices], labeled[test_indices], 
+            self._frame_invalidity[test_indices])
         
         # Train dataset should not have missed frames at all.
-        train_not_missed = ~self._mask[train_indices]
+        train_not_missed = ~self._frame_invalidity[train_indices]
         x = self._x[train_indices]
         new_x = np.zeros_like(x)
         seq_i, frame_i = np.nonzero(train_not_missed)
@@ -158,7 +161,9 @@ class SkeletonKFoldOperator(KFoldOperator[TT], Generic[TT, C]):
         new_x[seq_i, frame_ii] = x[seq_i, frame_i]
         
         self._x[train_indices] = pad_empty_frames(new_x)
+        
         sets[Separation.TRAIN] = SkeletonDataset(self._x[train_indices], self._names[train_indices], 
-                self._numeric_labels[train_indices])
+                self._numeric_labels[train_indices], labeled[train_indices], 
+                self._frame_invalidity[train_indices])
         
         return sets

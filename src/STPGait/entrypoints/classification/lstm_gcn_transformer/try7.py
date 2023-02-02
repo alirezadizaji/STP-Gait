@@ -10,7 +10,7 @@ from ....preprocess.main import PreprocessingConfig
 from .try4 import Entrypoint as E
 from ...train import TrainEntrypoint
 
-IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
 # try 7 (try 4 ->)
@@ -21,7 +21,6 @@ class Entrypoint(E):
             config=SkeletonKFoldConfig(
                 kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0, remove_labels=[Label.ATAXIC, Label.PARETIC, Label.SENSORY_ATAXIC]),
                 load_dir="../../Data/output_1.pkl",
-                filterout_unlabeled=True,
                 savename="processed_120c.pkl",
                 proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)))
             )

@@ -11,7 +11,7 @@ from ....models import GCNLSTMTransformer
 from ....preprocess.main import PreprocessingConfig
 from ...train import TrainEntrypoint
 
-IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
 # try 2: LSTM_GCN_Transformer run
@@ -25,7 +25,6 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
             config=SkeletonKFoldConfig(
                 kfold_config=KFoldConfig(K=10, init_valK=0, init_testK=1),
                 load_dir="../../Data/output_1.pkl",
-                filterout_unlabeled=True,
                 savename="processed_120c.pkl",
                 proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)))
             )
