@@ -77,7 +77,7 @@ class SkeletonKFoldOperator(KFoldOperator[TT], Generic[TT, C]):
         self._node_invalidity = self._get_node_invalidity()
         self._frame_invalidity = self._node_invalidity.sum(2) > 0
 
-        KFoldOperator().__init__(**self.conf.kfold_config.__dict__)
+        super().__init__(**self.conf.kfold_config.__dict__)
 
     def _get_node_invalidity(self) -> np.ndarray:
         """ It generates a mask, determining whether a node within a frame is missed or not. It verifies

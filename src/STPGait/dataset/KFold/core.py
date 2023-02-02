@@ -36,16 +36,14 @@ class KFoldOperator(ABC, Generic[T]):
         self.valK = self._init_valK
         self.testK = init_testK
 
+        self._filterout_unlabeled = filterout_unlabeled
+
         self.train: T = None
         self.val: T = None
         self.test: T = None
 
         labels = self.get_labels()
-        if filterout_unlabeled:
-            labeled_mask = np.ones_like(labels, dtype=np.bool)
-        else:
-            labeled_mask = self.get_labeled_mask()
-
+        labeled_mask = self.get_labeled_mask()
         assert labels.size == labeled_mask.size, "Mismatch size between labels and the mask."
 
         num_samples = labels.size
@@ -56,9 +54,10 @@ class KFoldOperator(ABC, Generic[T]):
             ignore_mask = ignore_mask.sum(1) > 0
 
         # First, split indices between separations using non-ignored, labeled samples
-        self._label_to_splits: Dict[int, List[np.ndarray]] = {}
-        self._ulabels = np.unique(labels[np.logical_and(~ignore_mask, labeled_mask)])
+        mask1 = np.logical_and(~ignore_mask, labeled_mask)
+        self._ulabels = np.unique(labels[mask1])
         self._numeric_labels = np.full(labels.size, fill_value=-np.inf, dtype=np.int64)
+        self._label_to_splits: Dict[int, List[np.ndarray]] = {}
 
         for i, l in enumerate(self._ulabels):
             l_idxs = np.nonzero(labels == l)
@@ -70,7 +69,8 @@ class KFoldOperator(ABC, Generic[T]):
         print(f"### {labeled_mask.sum()} out of {labels.size} are labeled. ###", flush=True)
 
         # Second, split indices between separations using unlabeled samples
-        unl_idxs = np.nonzero(~labeled_mask)
+        mask2 = ~labeled_mask
+        unl_idxs = np.nonzero(mask2)
         self._unlabeled_to_splits: List[np.ndarray] = np.array_split(unl_idxs[0], K)
 
 
@@ -78,10 +78,6 @@ class KFoldOperator(ABC, Generic[T]):
     def get_labels(self) -> np.ndarray:
         """ This returns label sets, to create Train/Val/Test KFolds """    
 
-    @property
-    def unlabeled_name(self):
-        return "unlabeled"
-    
     @abstractmethod
     def get_labeled_mask(self) -> np.ndarray:
         """ This returns a mask, determining if a sample is labeled or not. """
@@ -121,12 +117,13 @@ class KFoldOperator(ABC, Generic[T]):
                 for k in trainKs:
                     train_indices.append(s[k])
             
-            # Assign unlabeled samples to separations
-            u = self._unlabeled_to_splits
-            for k in trainKs:
-                train_indices.append(u[k])
-            val_indices.append(u[valK])
-            test_indices.append(u[testK])
+            if not self._filterout_unlabeled:
+                # Assign unlabeled samples to separations
+                u = self._unlabeled_to_splits
+                for k in trainKs:
+                    train_indices.append(u[k])
+                val_indices.append(u[valK])
+                test_indices.append(u[testK])
 
             val_indices = np.concatenate(val_indices).flatten()
             test_indices = np.concatenate(test_indices).flatten()
