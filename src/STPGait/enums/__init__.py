@@ -1,3 +1,4 @@
+from .body_part import Body
 from .edge_type import EdgeType
 from .label import Label
 from .optim import Optim

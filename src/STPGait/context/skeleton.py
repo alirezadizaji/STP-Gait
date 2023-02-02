@@ -3,6 +3,7 @@ from typing import Optional
 import numpy as np
 import torch
 
+from ..enums import Body
 from ..utils import replicate_edge_index_in_frames, \
     generate_inter_frames_edge_index_mode1, generate_inter_frames_edge_index_mode2
 
@@ -27,8 +28,10 @@ class Skeleton:
     
     NON_CRITICAL: np.ndarray = np.concatenate((HEAD_EYES_EARS, SHOULDERS, FOOTS))
     CRITICAL: np.ndarray = np.concatenate((ELBOWS_HANDS, NECK_TO_KNEE, WRISTS_FOOTS))
-
+    
     UPPER_BODY: np.ndarray = np.array([8, 9, 12, 1, 2, 3, 4, 5, 6, 7, 0, 15, 16, 17, 18])
+    # CENTER NODES are exist in both upper and lower parts
+    LOWER_BODY: np.ndarray = np.array([8, 9, 12, 10, 11, 13, 14, 19, 20, 21, 22, 23, 24])
 
     _one_direction_edges: np.ndarray = np.array([
         [0, 15], [0, 16], [15, 17], [16, 18], [0, 1],
@@ -40,16 +43,16 @@ class Skeleton:
 
     self_loop_edges = np.concatenate([edges, np.tile(np.arange(num_nodes), (2, 1))], axis=1)
 
-    upper_part_node_indices = np.concatenate([np.arange(8), np.arange(4) + 15])
-
     @staticmethod
-    def lower_part_edges(edge_index: np.ndarray) -> np.ndarray:
+    def half_part_edges(edge_index: np.ndarray, use_lower_part: bool = True) -> np.ndarray:
         src, dst = edge_index
-        src_mask = src[:, np.newaxis] == Skeleton.upper_part_node_indices[np.newaxis, :]
-        src_mask = src_mask.sum(1) == 0
 
-        dst_mask = dst[:, np.newaxis] == Skeleton.upper_part_node_indices[np.newaxis, :]
-        dst_mask = dst_mask.sum(1) == 0
+        node_indices = Skeleton.LOWER_BODY if use_lower_part else Skeleton.UPPER_BODY
+        src_mask = src[:, np.newaxis] == node_indices[np.newaxis, :]
+        src_mask = src_mask.sum(1) > 0
+
+        dst_mask = dst[:, np.newaxis] == node_indices[np.newaxis, :]
+        dst_mask = dst_mask.sum(1) > 0
 
         mask = np.logical_and(src_mask, dst_mask)
         edges_1d = np.concatenate([src[mask], dst[mask]])
@@ -59,22 +62,25 @@ class Skeleton:
         return res
 
     @staticmethod
-    def get_vanilla_edges(T: int, use_lower_part: bool = False):
+    def get_vanilla_edges(T: int, body_part: Body = Body.WHOLE):
         """ Please checkout documentation of `replicate_edge_index_in_frames` function. """
         edge_index = Skeleton.self_loop_edges
-        if use_lower_part:
-            edge_index = Skeleton.lower_part_edges(edge_index)
-
+        if body_part == Body.LOWER:
+            edge_index = Skeleton.half_part_edges(edge_index, use_lower_part=True)
+        elif body_part == Body.UPPER:
+            edge_index = Skeleton.half_part_edges(edge_index, use_lower_part=False)
+        else:
+            pass
         V = np.unique(edge_index).size
         edge_index = replicate_edge_index_in_frames(edge_index, T)
 
         return edge_index, V
 
     @staticmethod
-    def get_simple_interframe_edges(T: int, dilation: int = 30, use_lower_part: bool = False) -> torch.Tensor:
+    def get_simple_interframe_edges(T: int, dilation: int = 30, body_part: Body = Body.WHOLE) -> torch.Tensor:
         r""" Please checkout documentation of `generate_inter_frames_edge_index_mode1` function. """
         
-        edge_index, V = Skeleton.get_vanilla_edges(T, use_lower_part)
+        edge_index, V = Skeleton.get_vanilla_edges(T, body_part)
         
         inter_frame_edges = generate_inter_frames_edge_index_mode1(T, V, dilation)
         edge_index = np.concatenate([edge_index, inter_frame_edges], axis=1)
@@ -83,10 +89,10 @@ class Skeleton:
 
     @staticmethod
     def get_interframe_edges_mode2(T: int, I: int = 30, offset: Optional[int] = None, 
-            use_lower_part: bool = False) -> torch.Tensor:
+            body_part: Body = Body.WHOLE) -> torch.Tensor:
         r""" Please checkout documentation of `generate_inter_frames_edge_index_mode2` function. """
         
-        edge_index, V = Skeleton.get_vanilla_edges(T, use_lower_part)
+        edge_index, V = Skeleton.get_vanilla_edges(T, body_part)
 
         inter_frame_edges = generate_inter_frames_edge_index_mode2(T, V, I, offset)
         edge_index = np.concatenate([edge_index, inter_frame_edges], axis=1)

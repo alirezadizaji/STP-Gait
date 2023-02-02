@@ -4,7 +4,7 @@ from ....config import BaseConfig, TrainingConfig
 from ....context import Skeleton
 from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
 from ....data.read_gait_data import ProcessingGaitConfig
-from ....enums import Optim
+from ....enums import Body, Optim
 from ....preprocess.main import PreprocessingConfig
 from .try14 import Entrypoint as E
 from ...train import TrainEntrypoint
@@ -34,4 +34,4 @@ class Entrypoint(E):
         self._edge_index: torch.Tensor = None
 
     def _get_edges(self, num_frames: int):
-        return Skeleton.get_simple_interframe_edges(num_frames, dilation=30, use_lower_part=True)
+        return Skeleton.get_simple_interframe_edges(num_frames, dilation=30, body_part=Body.LOWER)
