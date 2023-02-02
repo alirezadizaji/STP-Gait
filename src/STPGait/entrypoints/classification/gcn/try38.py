@@ -10,7 +10,7 @@ from ....config import BaseConfig, TrainingConfig
 from ....context import Skeleton
 from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
 from ....data.read_gait_data import ProcessingGaitConfig
-from ....enums import Separation, Optim
+from ....enums import Body, Separation, Optim
 from ....models import GCNSemiSupervised
 from ....preprocess.main import PreprocessingConfig
 from ...train import TrainEntrypoint
@@ -45,6 +45,8 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         TrainEntrypoint.__init__(self, kfold, config)
 
         self._edge_index: torch.Tensor = None
+        self._edge_index_upper: torch.Tensor = None
+        self._edge_index_lower: torch.Tensor = None
 
     def get_model(self) -> nn.Module:
         num_classes = np.unique(self.kfold.get_labels()).size - 1
@@ -56,64 +58,92 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         return Skeleton.get_interframe_edges_mode2(num_frames, I=60, offset=30)
 
     def _model_forwarding(self, data: IN) -> OUT:
-        x = data[0][..., [0, 1]] # Use X-Y features
+        x, y, node_invalid, labeled = data
+        x = x[..., [0, 1]]
 
         if self._edge_index is None:
-            self._edge_index = self._get_edges(x.size(1))
-        x = x.flatten(1, -2) # N, T*V, D
-        data = Batch.from_data_list([Data(x=x_, edge_index=self._edge_index) for x_ in x])
-        data = data.to(x.device)
-        out: OUT = self.model(data=data)
+            self._edge_index = self._get_edges(x.size(1)).to(x.device)
+            self._edge_index_upper = Skeleton.get_interframe_edges_mode2(x.size(1), I=60, offset=30, body_part=Body.UPPER).to(x.device)
+            self._edge_index_lower = Skeleton.get_interframe_edges_mode2(x.size(1), I=60, offset=30, body_part=Body.LOWER).to(x.device)
+
+        out: OUT = self.model(x, self._edge_index, self._edge_index_upper, 
+                        self._edge_index_lower, y, node_invalid, labeled)
         return out
 
     def _calc_loss(self, x: OUT, data: IN) -> torch.Tensor:
-        y = data[1]
-        x_log = F.log_softmax(x)
+        *a, sup_loss, unsup_lower, unsup_upper = x
+
+        loss = sup_loss + 0.2 * (unsup_lower + unsup_upper)
+
+        self.sup_losses.append(sup_loss)
+        self.unsups_lower.append(unsup_lower)
+        self.unsups_upper.append(unsup_upper)
+        self.losses.append(loss)
         
-        loss = -torch.mean(x_log[torch.arange(x_log.size(0)), y])
         return loss
 
     def _train_start(self) -> None:
-        self.correct = self.total = 0
+        self.correct_sup = self.total_sup = 0
+        self.correct_all = self.total_all = 0
         self.losses = list()
+        self.sup_losses = list()
+        self.unsups_lower = list()
+        self.unsups_upper = list()
 
     def _eval_start(self) -> None:
         self._train_start()
 
     def _train_iter_end(self, iter_num: int, loss: torch.Tensor, x: OUT, data: IN) -> None:
-        self.losses.append(loss.item())
-
+        y, labeled = data[1], data[3]
+        y_pred, yl, yu, *b = x
         x_probs = x[0]
         y_pred = x_probs.argmax(-1)
         y = data[1]
-        self.correct += torch.sum(y_pred == y).item()
-        self.total += y.numel()
+        self.correct_sup += torch.sum(y_pred == y[labeled]).item()
+        self.total_sup += y.numel()
+
+        self.correct_all += torch.sum(yl == yu).item()
+        self.total_all += yl.numel()
 
         if iter_num % 20 == 0:
             print(f'epoch {self.epoch} iter {iter_num} loss value {np.mean(self.losses)}', flush=True)
 
     def _eval_iter_end(self, separation: Separation, iter_num: int, loss: torch.Tensor, x: OUT, data: IN) -> None:
-        if ~np.isnan(loss.item()):
-            self.losses.append(loss.item())
-        
+        y, labeled = data[1], data[3]
+        y_pred, yl, yu, *b = x
         x_probs = x[0]
         y_pred = x_probs.argmax(-1)
         y = data[1]
-        self.correct += torch.sum(y_pred == y).item()
-        self.total += y.numel()
+        self.correct_sup += torch.sum(y_pred == y[labeled]).item()
+        self.total_sup += y.numel()
+
+        self.correct_all += torch.sum(yl == yu).item()
+        self.total_all += yl.numel()
+
 
     def _train_epoch_end(self) -> np.ndarray:
         loss = np.mean(self.losses)
-        acc = self.correct / self.total
-        print(f'epoch{self.epoch} loss value {loss} acc {acc}', flush=True)
+        sloss = np.mean(self.sup_losses)
+        ulloss = np.mean(self.unsups_lower)
+        uuloss = np.mean(self.unsups_upper)
 
-        return np.array([loss, acc])
+        acc = self.correct_sup / self.total_sup
+        uacc = self.correct_all / self.total_all
+        print(f'epoch{self.epoch} loss value {loss}, sloss {sloss}, ulloss {ulloss}, uuloss {uuloss}; acc supervised {acc}, unsupervised {uacc}', flush=True)
+
+        return np.array([loss, sloss, ulloss, uuloss, acc])
 
     def _eval_epoch_end(self, datasep: Separation) -> np.ndarray:
-        acc = self.correct / self.total
         loss = np.mean(self.losses)
-        print(f'epoch {self.epoch} separation {datasep} loss value {loss} acc {acc}', flush=True)
-        return np.array([loss, acc])
+        sloss = np.mean(self.sup_losses)
+        ulloss = np.mean(self.unsups_lower)
+        uuloss = np.mean(self.unsups_upper)
+
+        acc = self.correct_sup / self.total_sup
+        uacc = self.correct_all / self.total_all
+        print(f'epoch{self.epoch} separation {datasep}, loss value {loss}, sloss {sloss}, ulloss {ulloss}, uuloss {uuloss}; acc supervised {acc}, unsupervised {uacc}', flush=True)
+
+        return np.array([loss, sloss, ulloss, uuloss, acc])
 
     def best_epoch_criteria(self, best_epoch: int) -> bool:
         val = self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch, self.best_epoch_criterion_idx]
@@ -122,7 +152,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
     @property
     def criteria_names(self) -> List[str]:
-        return super().criteria_names + ['ACC']
+        return super().criteria_names + ['SLOSS', 'ULOSS_L', 'ULOSS_U', 'ACC']
 
     @property
     def best_epoch_criterion_idx(self) -> int:
