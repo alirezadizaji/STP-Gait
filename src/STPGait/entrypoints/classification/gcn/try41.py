@@ -8,10 +8,10 @@ from ....data.read_gait_data import ProcessingGaitConfig
 from ....enums import Label, Optim
 from ....models.gcn_semisupervised import calc_edge_weight
 from ....preprocess.main import PreprocessingConfig
-from .try17 import Entrypoint as E
+from .try39 import Entrypoint as E
 from ...train import TrainEntrypoint
 
-# try 39 (try 17 ->)
+# try 41 (try 39 ->)
 ## Apply on anxious-hypokinetic_frontal-healthy labels.
 class Entrypoint(E):
     def __init__(self) -> None:
