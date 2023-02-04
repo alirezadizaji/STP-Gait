@@ -1,6 +1,7 @@
 from typing import Optional
 
 from dig.xgraph.models import GCN_3l_BN
+import numpy as np
 import torch
 from torch import nn
 from torch_geometric.data import Batch, Data
@@ -19,9 +20,13 @@ def _calc_edge_weight(edge_index: torch.Tensor, node_valid: Optional[torch.Tenso
 
 class GCNSemiSupervised(nn.Module):
     def __init__(self, dim_node: int, dim_hidden: int, sup_num_classes: int, 
-            unsup_num_classes: Optional[int] = None) -> None:
-        super().__init_()
+            unsup_num_classes: Optional[int] = None, part1: np.ndarray = Skeleton.LOWER_BODY, 
+            part2: np.ndarray = Skeleton.UPPER_BODY) -> None:
+        super().__init__()
 
+        self.p1_idx = part1
+        self.p2_idx = part2
+        
         if unsup_num_classes is None:
             unsup_num_classes = sup_num_classes
 
@@ -29,45 +34,61 @@ class GCNSemiSupervised(nn.Module):
 
         # Supervised branch
         self.gcn_supervised = GCN_3l_BN(model_level="graph", dim_node=dim_hidden, 
-            num_classes=sup_num_classes)
+            dim_hidden=dim_hidden, num_classes=sup_num_classes)
         
         # Unsupervised branch
         self.gcn_unsupervised_lower = GCN_3l_BN(model_level="graph", dim_node=dim_hidden,
-            num_classes=unsup_num_classes)
+            dim_hidden=dim_hidden, num_classes=unsup_num_classes)
         self.gcn_unsupervised_upper = GCN_3l_BN(model_level="graph", dim_node=dim_hidden,
-            num_classes=unsup_num_classes)
+            dim_hidden=dim_hidden, num_classes=unsup_num_classes)
 
-    def forward(self, x: torch.Tensor, edge_index: torch.Tensor, edge_index_upper: torch.Tensor, 
-            edge_index_lower: torch.Tensor, y: torch.Tensor, node_invalid: torch.Tensor, 
+    def forward(self, x: torch.Tensor, edge_index: torch.Tensor, edge_index_p1: torch.Tensor, 
+            edge_index_p2: torch.Tensor, y: torch.Tensor, node_invalid: torch.Tensor, 
             labeled: torch.Tensor):
 
-        x = self.encoder(x)                          # N, T, V, D
-        x_lower = x[:, :, Skeleton.LOWER_BODY]       # N, T, V1, D
-        x_upper = x[:, :, Skeleton.UPPER_BODY]       # N, T, V2, D
+        assert node_invalid.ndim == 3, "Node invalid must have N, T, V shape."
+        x = self.encoder(x)                         
+        x1 = x[:, :, self.p1_idx]
+        niv1 = node_invalid[:, :, self.p1_idx].flatten(1)
 
-        data1 = Batch([Data(x=x_.flatten(end_dim=-2), edge_index=edge_index, 
-            edge_weight=_calc_edge_weight(edge_index, ~node_invalid)) for x_ in x[labeled]])
-        o_sup = self.gcn_supervised(data1)
+        x2 = x[:, :, self.p2_idx]
+        niv2 = node_invalid[:, :, self.p2_idx].flatten(1)
 
-        data2 = Batch([Data(x=x_.flatten(end_dim=-2), edge_index=edge_index_lower, 
-            edge_weight=_calc_edge_weight(edge_index, ~node_invalid)) for x_ in x_lower])
-        data3 = Batch([Data(x=x_.flatten(end_dim=-2), edge_index=edge_index_upper, 
-            edge_weight=_calc_edge_weight(edge_index, ~node_invalid)) for x_ in x_upper])
-        ol_unsup = self.gcn_unsupervised_lower(data2)
-        ou_unsup = self.gcn_unsupervised_upper(data3)
+        niv = node_invalid.flatten(1)
 
-        olog_sup = F.log_softmax(o_sup)
-        y_pred = olog_sup.argmax(1)
-        ollog_unsup = F.log_softmax(ol_unsup)
-        oulog_unsup = F.log_softmax(ou_unsup)
+        if torch.any(labeled):
+            data1 = Batch.from_data_list([Data(x=x_.flatten(end_dim=-2), edge_index=edge_index, 
+                edge_weight=_calc_edge_weight(edge_index, ni)) for x_, ni in zip(x[labeled], ~niv[labeled])])
+            
+            o_sup = self.gcn_supervised(x=data1.x, edge_index=data1.edge_index)
+            
+            olog_sup = F.log_softmax(o_sup)
+            idx = torch.arange(olog_sup.size(0))
+            sup_loss = -torch.mean(olog_sup[idx, y[labeled]])
+            y_pred = olog_sup.argmax(1)
+        else:
+            y_pred = None
+            sup_loss = None
 
-        idx = torch.arange(olog_sup.size(0))
-        sup_loss = -torch.mean(olog_sup[idx, y[labeled]])
+        # Unsupervised forwarding
+        ## 1st: Forward first part of body; e.g. lower part
+        data2 = Batch.from_data_list([Data(x=x_.flatten(end_dim=-2), edge_index=edge_index_p1, 
+            edge_weight=_calc_edge_weight(edge_index_p1, nv)) for x_, nv in zip(x1, ~niv1)])
+        o1_unsup = self.gcn_unsupervised_lower(x=data2.x, edge_index=data2.edge_index)
 
-        yl = ollog_unsup.argmax(1).detach()
-        yu = oulog_unsup.argmax(1).detach()
-        idx = torch.arange(yl.numel())
-        unsup_lower = -torch.mean(ollog_unsup[idx, yu])
-        unsup_upper = -torch.mean(oulog_unsup[idx, yl])
+        ## 2nd: Forward 2nd part of body; e.g. upper part
+        data3 = Batch.from_data_list([Data(x=x_.flatten(end_dim=-2), edge_index=edge_index_p2, 
+            edge_weight=_calc_edge_weight(edge_index_p2, nv)) for x_, nv in zip(x2, ~niv2)])
+        o2_unsup = self.gcn_unsupervised_upper(x=data3.x, edge_index=data3.edge_index)
+
+
+        o1log_unsup = F.log_softmax(o1_unsup)
+        o2log_unsup = F.log_softmax(o2_unsup)
         
-        return y_pred, yl, yu, sup_loss, unsup_lower, unsup_upper
+        y1 = o1log_unsup.argmax(1).detach()
+        y2 = o2log_unsup.argmax(1).detach()
+        idx = torch.arange(y1.numel())
+        u1_loss = -torch.mean(o1log_unsup[idx, y2])
+        u2_loss = -torch.mean(o2log_unsup[idx, y1])
+        
+        return y_pred, y1, y2, sup_loss, u1_loss, u2_loss

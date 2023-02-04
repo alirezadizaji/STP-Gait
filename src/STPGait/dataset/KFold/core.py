@@ -129,6 +129,10 @@ class KFoldOperator(ABC, Generic[T]):
             test_indices = np.concatenate(test_indices).flatten()
             train_indices = np.concatenate(train_indices).flatten()
 
+            np.random.shuffle(val_indices)
+            np.random.shuffle(test_indices)
+            np.random.shuffle(train_indices)
+            
             return train_indices, val_indices, test_indices
 
         train_indices, val_indices, test_indices = _get_indices()

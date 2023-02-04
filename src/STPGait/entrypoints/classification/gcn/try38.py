@@ -54,31 +54,35 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         model = GCNSemiSupervised(dim_node=2, dim_hidden=60, sup_num_classes=num_classes, unsup_num_classes=num_classes)
         return model
 
-    def _get_edges(self, num_frames: int):
-        return Skeleton.get_interframe_edges_mode2(num_frames, I=60, offset=30)
+    def _get_edges(self, num_frames: int, body_part: Body) -> torch.Tensor:
+        return Skeleton.get_interframe_edges_mode2(num_frames, I=60, offset=30, body_part=body_part)
 
     def _model_forwarding(self, data: IN) -> OUT:
         x, y, node_invalid, labeled = data
         x = x[..., [0, 1]]
-
+        node_invalid = node_invalid.to(x.device)
+        
         if self._edge_index is None:
-            self._edge_index = self._get_edges(x.size(1)).to(x.device)
-            self._edge_index_upper = Skeleton.get_interframe_edges_mode2(x.size(1), I=60, offset=30, body_part=Body.UPPER).to(x.device)
-            self._edge_index_lower = Skeleton.get_interframe_edges_mode2(x.size(1), I=60, offset=30, body_part=Body.LOWER).to(x.device)
+            self._edge_index = self._get_edges(x.size(1), Body.WHOLE).to(x.device)
+            self._edge_index_upper = self._get_edges(x.size(1), Body.UPPER).to(x.device)
+            self._edge_index_lower = self._get_edges(x.size(1), Body.LOWER).to(x.device)
 
-        out: OUT = self.model(x, self._edge_index, self._edge_index_upper, 
-                        self._edge_index_lower, y, node_invalid, labeled)
+        out: OUT = self.model(x, self._edge_index, self._edge_index_lower, 
+                        self._edge_index_upper, y, node_invalid, labeled)
         return out
 
     def _calc_loss(self, x: OUT, data: IN) -> torch.Tensor:
         *a, sup_loss, unsup_lower, unsup_upper = x
 
-        loss = sup_loss + 0.2 * (unsup_lower + unsup_upper)
-
-        self.sup_losses.append(sup_loss)
-        self.unsups_lower.append(unsup_lower)
-        self.unsups_upper.append(unsup_upper)
-        self.losses.append(loss)
+        loss = 0
+        if sup_loss is not None:
+            self.sup_losses.append(sup_loss.item())
+            loss = loss + sup_loss
+            
+        loss = loss + 0.2 * (unsup_lower + unsup_upper) 
+        self.unsups_lower.append(unsup_lower.item())
+        self.unsups_upper.append(unsup_upper.item())
+        self.losses.append(loss.item())
         
         return loss
 
@@ -96,11 +100,13 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
     def _train_iter_end(self, iter_num: int, loss: torch.Tensor, x: OUT, data: IN) -> None:
         y, labeled = data[1], data[3]
         y_pred, yl, yu, *b = x
-        x_probs = x[0]
-        y_pred = x_probs.argmax(-1)
-        y = data[1]
-        self.correct_sup += torch.sum(y_pred == y[labeled]).item()
-        self.total_sup += y.numel()
+    
+        if y_pred is not None:
+            x_probs = x[0]
+            y_pred = x_probs.argmax(-1)
+            y = data[1]
+            self.correct_sup += torch.sum(y_pred == y[labeled]).item()
+            self.total_sup += y.numel()
 
         self.correct_all += torch.sum(yl == yu).item()
         self.total_all += yl.numel()
@@ -111,11 +117,13 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
     def _eval_iter_end(self, separation: Separation, iter_num: int, loss: torch.Tensor, x: OUT, data: IN) -> None:
         y, labeled = data[1], data[3]
         y_pred, yl, yu, *b = x
-        x_probs = x[0]
-        y_pred = x_probs.argmax(-1)
-        y = data[1]
-        self.correct_sup += torch.sum(y_pred == y[labeled]).item()
-        self.total_sup += y.numel()
+
+        if y_pred is not None:
+            x_probs = x[0]
+            y_pred = x_probs.argmax(-1)
+            y = data[1]
+            self.correct_sup += torch.sum(y_pred == y[labeled]).item()
+            self.total_sup += y.numel()
 
         self.correct_all += torch.sum(yl == yu).item()
         self.total_all += yl.numel()
