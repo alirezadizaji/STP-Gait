@@ -198,6 +198,8 @@ class GCNLSTMTransformer(nn.Module):
             x1 = self.conv(x1)
         if self.encoder is not None:
             x1 = self.encoder(x1)
+            # Use only first sequence
+            x1 = x1[:, [0]]
 
         x1 = self.fc_classfier(x1)
         loss2 = self.loss2(x1, y)
