@@ -119,6 +119,8 @@ class GCNLSTMTransformer(nn.Module):
 
         if cnn_conf is not None:
             h1 = fc_hidden * cnn_conf["out_channels"]
+        elif transformer_encoder_conf is not None:
+            h1 = fc_hidden * 1
         else:
             h1 = fc_hidden * 417
         self.fc_classfier = nn.Sequential(
