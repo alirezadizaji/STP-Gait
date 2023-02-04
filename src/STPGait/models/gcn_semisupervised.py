@@ -15,7 +15,8 @@ def calc_edge_weight(edge_index: torch.Tensor, node_valid: Optional[torch.Tensor
     
     row, col = edge_index
     row_valid, col_valid = node_valid[row], node_valid[col]
-    edge_valid = torch.logical_and(row_valid, col_valid).long()
+    edge_valid = torch.logical_and(row_valid, col_valid).float()
+
     return edge_valid
 
 class GCNSemiSupervised(nn.Module):

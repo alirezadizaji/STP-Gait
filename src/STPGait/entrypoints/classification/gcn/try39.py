@@ -37,7 +37,7 @@ class Entrypoint(E):
 
     def _model_forwarding(self, data):
         x = data[0][..., [0, 1]] # Use X-Y features
-        node_invalid = data[3].flatten(1).to(x.device)
+        node_invalid = data[2].flatten(1).to(x.device)
         node_valid = ~node_invalid
 
         if self._edge_index is None:
