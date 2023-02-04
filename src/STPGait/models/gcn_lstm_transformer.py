@@ -147,7 +147,7 @@ class GCNLSTMTransformer(nn.Module):
         
         row, col = self.edge_index
         row_valid, col_valid = node_valid[row], node_valid[col]
-        edge_valid = torch.logical_and(row_valid, col_valid).long()
+        edge_valid = torch.logical_and(row_valid, col_valid).float()
         return edge_valid
 
     def forward(self, x: torch.Tensor, y: torch.Tensor, x_valid: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
