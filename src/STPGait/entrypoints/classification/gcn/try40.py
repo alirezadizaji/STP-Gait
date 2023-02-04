@@ -12,7 +12,7 @@ from .try18 import Entrypoint as E
 from ...train import TrainEntrypoint
 
 # try 40 (try 18 ->)
-## Applying non-temporal edges
+## Zero out edge weights whose one end have at least one invalid node.
 class Entrypoint(E):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(

@@ -11,7 +11,7 @@ from ....context import Skeleton
 from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
 from ....data.read_gait_data import ProcessingGaitConfig
 from ....enums import Separation, Optim
-from ....models import GCN_3l_BN
+from ....models.gcn_3l_bn import GCN_3l_BN
 from ....preprocess.main import PreprocessingConfig
 from ...train import TrainEntrypoint
 

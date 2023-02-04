@@ -6,7 +6,7 @@ from ....config import BaseConfig, TrainingConfig
 from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
 from ....data.read_gait_data import ProcessingGaitConfig
 from ....enums import Optim
-from ....models import GCN_3l_BN
+from ....models.gcn_3l_bn import GCN_3l_BN
 from ....preprocess.main import PreprocessingConfig
 from .try17 import Entrypoint as E
 from ...train import TrainEntrypoint
