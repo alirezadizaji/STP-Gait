@@ -27,10 +27,11 @@ class GCNTransformer(GCN_3l_BN):
 
         self.V = num_nodes
 
-    def forward(self, x: torch.Tensor, edge_index: torch.Tensor, batch: torch.Tensor, edge_weight: torch.Tensor = None) -> torch.Tensor:
-        N = x.size(0)
-        L, _ = x.size(1)
-        T = L // self.V
+    def forward(self, batch_size: int, x: torch.Tensor, edge_index: torch.Tensor, batch: torch.Tensor, 
+            edge_weight: torch.Tensor = None) -> torch.Tensor:
+        N = batch_size
+        L = x.size(0)
+        T = L // (N * self.V)
 
         post_conv = self.relu1(self.conv1(x, edge_index, edge_weight))
         for conv, relu in zip(self.convs, self.relus):

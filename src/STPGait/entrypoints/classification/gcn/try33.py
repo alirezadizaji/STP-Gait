@@ -44,13 +44,13 @@ class Entrypoint(E):
 
     def _model_forwarding(self, data):
         x = data[0][..., [0, 1]] # Use X-Y features
-
         if self._edge_index is None:
             self._edge_index = self._get_edges(x.size(1)).to(x.device)
 
         x = x.flatten(1, -2) # N, T*V, D
+        batch_size = x.size(0)
 
         data = Batch.from_data_list([Data(x=x_, edge_index=self._edge_index) for x_ in x])
         data = data.to(x.device)
-        out = self.model(x=data.x, edge_index=data.edge_index, batch=data.batch)
+        out = self.model(batch_size, x=data.x, edge_index=data.edge_index, batch=data.batch)
         return out
