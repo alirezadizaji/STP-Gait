@@ -1,11 +1,11 @@
 from typing import List, Optional
 
-from dig.xgraph.models import GCN_3l_BN
 import torch
 from torch import nn
 from torch_geometric.data import Batch, Data
 
 from .gcn_lstm_transformer import TransformerEncoderConf
+from .gcn_3l_bn import GCN_3l_BN
 
 class GCNTransformer(GCN_3l_BN):
     def __init__(self, model_level: str, dim_node: int, 
@@ -27,18 +27,14 @@ class GCNTransformer(GCN_3l_BN):
 
         self.V = num_nodes
 
-    def forward(self, data: List[Data]) -> torch.Tensor:
-        N = len(data)
-        L, _ = data[0].x.shape
+    def forward(self, x: torch.Tensor, edge_index: torch.Tensor, batch: torch.Tensor, edge_weight: torch.Tensor = None) -> torch.Tensor:
+        N = x.size(0)
+        L, _ = x.size(1)
         T = L // self.V
 
-        with torch.no_grad():
-            X: Batch = Batch.from_data_list(data)
-            x, edge_index, batch = X.x, X.edge_index, X.batch
-
-        post_conv = self.relu1(self.conv1(x, edge_index))
+        post_conv = self.relu1(self.conv1(x, edge_index, edge_weight))
         for conv, relu in zip(self.convs, self.relus):
-            post_conv = relu(conv(post_conv, edge_index))
+            post_conv = relu(conv(post_conv, edge_index, edge_weight))
         
         post_conv = post_conv.reshape(N, T, self.V, -1)
         assert post_conv.size(1) == T and post_conv.size(2) == self.V, "Shape mismatch."

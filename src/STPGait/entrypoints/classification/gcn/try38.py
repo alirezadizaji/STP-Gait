@@ -49,7 +49,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         self._edge_index_lower: torch.Tensor = None
 
     def get_model(self) -> nn.Module:
-        num_classes = np.unique(self.kfold.get_labels()).size - 1
+        num_classes = self.kfold._ulabels.size
         print(f"*** Train GCNSemiSupervised on {num_classes} classes. ***", flush=True)
         model = GCNSemiSupervised(dim_node=2, dim_hidden=60, sup_num_classes=num_classes, unsup_num_classes=num_classes)
         return model

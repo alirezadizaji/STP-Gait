@@ -1,6 +1,5 @@
 from typing import List, Tuple
 
-from dig.xgraph.models import GCN_3l_BN
 import numpy as np
 import torch
 from torch import nn
@@ -12,6 +11,7 @@ from ....context import Skeleton
 from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
 from ....data.read_gait_data import ProcessingGaitConfig
 from ....enums import Separation, Optim
+from ....models import GCN_3l_BN
 from ....preprocess.main import PreprocessingConfig
 from ...train import TrainEntrypoint
 
@@ -61,7 +61,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         x = x.flatten(1, -2) # N, T*V, D
         data = Batch.from_data_list([Data(x=x_, edge_index=self._edge_index) for x_ in x])
         data = data.to(x.device)
-        out: OUT = self.model(data=data)
+        out: OUT = self.model(x=data.x, edge_index=data.edge_index, batch=data.batch)
         return out
 
     def _calc_loss(self, x: OUT, data: IN) -> torch.Tensor:

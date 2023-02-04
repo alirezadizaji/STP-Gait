@@ -2,7 +2,7 @@ from typing import List
 
 import torch
 from torch import nn
-from torch_geometric.data import Data
+from torch_geometric.data import Data, Batch
 
 from ....config import BaseConfig, TrainingConfig
 from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
@@ -49,6 +49,8 @@ class Entrypoint(E):
             self._edge_index = self._get_edges(x.size(1)).to(x.device)
 
         x = x.flatten(1, -2) # N, T*V, D
-        data: List[Data] = [Data(x=x_, edge_index=self._edge_index) for x_ in x]
-        out = self.model(data=data)
+
+        data = Batch.from_data_list([Data(x=x_, edge_index=self._edge_index) for x_ in x])
+        data = data.to(x.device)
+        out = self.model(x=data.x, edge_index=data.edge_index, batch=data.batch)
         return out

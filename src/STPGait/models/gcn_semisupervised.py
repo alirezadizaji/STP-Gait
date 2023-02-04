@@ -1,6 +1,5 @@
 from typing import Optional
 
-from dig.xgraph.models import GCN_3l_BN
 import numpy as np
 import torch
 from torch import nn
@@ -8,8 +7,9 @@ from torch_geometric.data import Batch, Data
 from torch.nn import functional as F
 
 from ..context import Skeleton
+from ..models import GCN_3l_BN
 
-def _calc_edge_weight(edge_index: torch.Tensor, node_valid: Optional[torch.Tensor]=None) -> Optional[torch.Tensor]:
+def calc_edge_weight(edge_index: torch.Tensor, node_valid: Optional[torch.Tensor]=None) -> Optional[torch.Tensor]:
     if node_valid is None:
         return None
     
@@ -58,9 +58,9 @@ class GCNSemiSupervised(nn.Module):
 
         if torch.any(labeled):
             data1 = Batch.from_data_list([Data(x=x_.flatten(end_dim=-2), edge_index=edge_index, 
-                edge_weight=_calc_edge_weight(edge_index, ni)) for x_, ni in zip(x[labeled], ~niv[labeled])])
+                edge_weight=calc_edge_weight(edge_index, ni)) for x_, ni in zip(x[labeled], ~niv[labeled])])
             
-            o_sup = self.gcn_supervised(x=data1.x, edge_index=data1.edge_index)
+            o_sup = self.gcn_supervised(x=data1.x, edge_index=data1.edge_index, batch=data1.batch, edge_weight=data1.edge_weight)
             
             olog_sup = F.log_softmax(o_sup)
             idx = torch.arange(olog_sup.size(0))
@@ -73,13 +73,13 @@ class GCNSemiSupervised(nn.Module):
         # Unsupervised forwarding
         ## 1st: Forward first part of body; e.g. lower part
         data2 = Batch.from_data_list([Data(x=x_.flatten(end_dim=-2), edge_index=edge_index_p1, 
-            edge_weight=_calc_edge_weight(edge_index_p1, nv)) for x_, nv in zip(x1, ~niv1)])
-        o1_unsup = self.gcn_unsupervised_lower(x=data2.x, edge_index=data2.edge_index)
+            edge_weight=calc_edge_weight(edge_index_p1, nv)) for x_, nv in zip(x1, ~niv1)])
+        o1_unsup = self.gcn_unsupervised_lower(x=data2.x, edge_index=data2.edge_index, batch=data2.batch, edge_weight=data2.edge_weight)
 
         ## 2nd: Forward 2nd part of body; e.g. upper part
         data3 = Batch.from_data_list([Data(x=x_.flatten(end_dim=-2), edge_index=edge_index_p2, 
-            edge_weight=_calc_edge_weight(edge_index_p2, nv)) for x_, nv in zip(x2, ~niv2)])
-        o2_unsup = self.gcn_unsupervised_upper(x=data3.x, edge_index=data3.edge_index)
+            edge_weight=calc_edge_weight(edge_index_p2, nv)) for x_, nv in zip(x2, ~niv2)])
+        o2_unsup = self.gcn_unsupervised_upper(x=data3.x, edge_index=data3.edge_index, batch=data3.batch, edge_weight=data3.edge_weight)
 
 
         o1log_unsup = F.log_softmax(o1_unsup)
