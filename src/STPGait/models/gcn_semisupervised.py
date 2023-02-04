@@ -7,7 +7,7 @@ from torch_geometric.data import Batch, Data
 from torch.nn import functional as F
 
 from ..context import Skeleton
-from ..models import GCN_3l_BN
+from .gcn_3l_bn import GCN_3l_BN
 
 def calc_edge_weight(edge_index: torch.Tensor, node_valid: Optional[torch.Tensor]=None) -> Optional[torch.Tensor]:
     if node_valid is None:
