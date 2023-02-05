@@ -6,6 +6,7 @@ from ....config import BaseConfig, TrainingConfig
 from ....data.read_gait_data import ProcessingGaitConfig
 from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
 from ....enums import Optim, Label
+from ....models.gcn_lstm_transformer import GCNLSTMTransformer
 from ....preprocess.main import PreprocessingConfig
 from .try2 import Entrypoint as E
 from ...train import TrainEntrypoint
@@ -34,3 +35,7 @@ class Entrypoint(E):
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
         TrainEntrypoint.__init__(self, kfold, config)
+    
+    def get_model(self):
+        model = GCNLSTMTransformer(num_classes=3)
+        return model

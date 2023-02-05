@@ -36,7 +36,7 @@ class Entrypoint(E):
         self._edge_index: torch.Tensor = None
 
     def _model_forwarding(self, data):
-        x = data[0]
+        x = data[0].to(self.conf.device)
 
         if self._edge_index is None:
             self._edge_index = self._get_edges(x.size(1))

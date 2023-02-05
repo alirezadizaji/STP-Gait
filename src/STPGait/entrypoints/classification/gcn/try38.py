@@ -59,7 +59,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
     def _model_forwarding(self, data: IN) -> OUT:
         x, y, node_invalid, labeled = data
-        x = x[..., [0, 1]]
+        x = x[..., [0, 1]].to(self.conf.device)
         node_invalid = node_invalid.to(x.device)
         
         if self._edge_index is None:

@@ -36,7 +36,7 @@ class Entrypoint(E):
         self._edge_index: torch.Tensor = None
 
     def _model_forwarding(self, data):
-        x = data[0][..., [0, 1]] # Use X-Y features
+        x = data[0][..., [0, 1]].to(self.conf.device) # Use X-Y features
         node_invalid = data[2].flatten(1).to(x.device)
         node_valid = ~node_invalid
 

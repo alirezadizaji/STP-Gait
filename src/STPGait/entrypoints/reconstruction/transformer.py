@@ -38,7 +38,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         return model
         
     def _model_forwarding(self, data: IN) -> OUT:
-        x = data[0]
+        x = data[0].to(self.conf.device)
         x = x[..., [0, 1]]
 
         with torch.no_grad():

@@ -3,6 +3,7 @@ from typing import Tuple
 import torch
 
 from ....config import BaseConfig, TrainingConfig
+from ....context import Skeleton
 from ....data.read_gait_data import ProcessingGaitConfig
 from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
 from ....enums import Optim, Label
@@ -37,4 +38,5 @@ class Entrypoint(E):
         TrainEntrypoint.__init__(self, kfold, config)
     
     def get_model(self):
-        return GCNLSTMTransformerV2(transformer_encoder_conf=None)
+        model = GCNLSTMTransformerV2(transformer_encoder_conf=None, num_classes=3, get_gcn_edges= lambda T: torch.from_numpy(Skeleton.get_vanilla_edges(T)[0]))
+        return model

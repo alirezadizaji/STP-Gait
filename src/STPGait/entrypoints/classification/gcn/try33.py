@@ -43,7 +43,7 @@ class Entrypoint(E):
             num_classes=num_classes)
 
     def _model_forwarding(self, data):
-        x = data[0][..., [0, 1]] # Use X-Y features
+        x = data[0][..., [0, 1]].to(self.conf.device) # Use X-Y features
         if self._edge_index is None:
             self._edge_index = self._get_edges(x.size(1)).to(x.device)
 
