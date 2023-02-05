@@ -16,6 +16,7 @@ OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
 # try 42 (try 4 ->)
 ## Use transformer model.
+## Filter out hardcases
 class Entrypoint(E):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(
@@ -23,6 +24,7 @@ class Entrypoint(E):
                 kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0),
                 load_dir="../../Data/output_1.pkl",
                 savename="processed_120c.pkl",
+                filterout_hardcases=True,
                 proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)))
             )
         config = BaseConfig(
