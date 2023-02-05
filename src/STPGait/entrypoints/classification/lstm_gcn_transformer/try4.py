@@ -36,7 +36,7 @@ class Entrypoint(E):
 
 
     def _model_forwarding(self, data: IN) -> OUT:
-        x, y, node_invalid = data
+        x, y, node_invalid, labeled = data
         x = x[..., [0, 1]].flatten(2)
         node_valid = ~node_invalid.flatten(1)
         x = self.model(x.to(self.conf.device), y.to(self.conf.device), node_valid.to(self.conf.device))
