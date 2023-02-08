@@ -16,7 +16,6 @@ OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
 # try 44 (try 42 ->)
 ## Use ataxic-hypokinetic_frontal-healthy labels
-## Filter out hardcases
 class Entrypoint(E):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(

@@ -10,7 +10,7 @@ from ...dataset.KFold import SkeletonKFoldOperator, SkeletonKFoldConfig, KFoldCo
 from ...dataset.skeleton import SkeletonDataset
 from ...enums import Optim, Separation
 
-from ...models.transformer import SimpleTransformer
+from ...models import SimpleTransformer
 from ..train import TrainEntrypoint
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, np.ndarray, torch.Tensor]
