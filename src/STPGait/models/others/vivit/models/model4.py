@@ -10,7 +10,12 @@ class FactorizedDotProductSelfAttEncoder(Encoder):
 
         enc_layer = FDPAT(q_d, kv_ds, kv_dt, nhead, dim_feedforward, dropout, activation)
         self.encoder = nn.TransformerEncoder(enc_layer, n_enc_layers, norm=None)
+        self.q_d = q_d
     
+    @property
+    def out_dim(self):
+        return self.q_d
+        
     def forward(self, x: Tensor) -> Tensor: 
         assert x.ndim == 4, "X's shape must have the form `(B, nt, nv, d)`."
         x = self.encoder(x)

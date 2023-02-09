@@ -19,7 +19,13 @@ class FactorizedEncoder(Encoder):
             encoder_layer=t_enc_layer,
             num_layers=n_enc_layers, 
             norm=None)
-    
+
+        self.dt_model = dt_model
+
+    @property
+    def out_dim(self) -> int:
+        return self.dt_model
+
     def forward(self, x: Tensor) -> Tensor:
         assert x.ndim == 4, "X's shape must have form of `(B, nt, nv, d)`."
         B, nt, nv, d = x.size()
