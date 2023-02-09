@@ -9,6 +9,8 @@ from .....preprocess.main import PreprocessingConfig
 from ....train import TrainEntrypoint
 from .try45 import Entrypoint as E
 
+# Try 46 (45 ->)
+# Model: ViViT (Encoder2)
 class Entrypoint(E):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(

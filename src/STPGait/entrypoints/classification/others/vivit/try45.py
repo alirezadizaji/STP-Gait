@@ -14,6 +14,13 @@ from ....train import TrainEntrypoint
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
+# Try 45
+# Model: ViViT (Encoder1)
+# Frames are pruned to 400 count
+# Tokenization: 40 Frames, Each single node is considered as spatial.
+# KFOLD = 5, Validation and Test are the same
+# Filterout hardcases
+# Filterout unlabeled cases
 class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(
