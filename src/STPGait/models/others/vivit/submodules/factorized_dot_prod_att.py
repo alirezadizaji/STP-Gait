@@ -12,32 +12,27 @@ class FactorizedDotProdAttTransformerEncoderLayer(nn.Module):
     NOTE:
         The implementation part is mostly the same as `torch.nn.TransformerEncoderLayer`.
     """
-    def __init__(self, q_d, kv_ds, kv_dt, nhead, dim_feedforward=2048, dropout=0.1, activation="relu"):
-        super(nn.Module, self).__init__()
+    def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1, activation="relu"):
+        super().__init__()
 
         shead = thead = nhead // 2
-        self.self_sattn = nn.MultiheadAttention(q_d, shead, dropout=dropout, kdim=kv_ds, vdim=kv_ds)
-        self.self_tattn = nn.MultiheadAttention(q_d, thead, dropout=dropout, kdim=kv_dt, vdim=kv_dt)
+        self.self_sattn = nn.MultiheadAttention(d_model, shead, dropout=dropout)
+        self.self_tattn = nn.MultiheadAttention(d_model, thead, dropout=dropout)
 
-        self.sublin = nn.Linear(2 * q_d, q_d)
+        self.sublin = nn.Linear(2 * d_model, d_model)
 
-        self.linear1 = nn.Linear(q_d, dim_feedforward)
+        self.linear1 = nn.Linear(d_model, dim_feedforward)
         self.dropout = nn.Dropout(dropout)
-        self.linear2 = nn.Linear(dim_feedforward, q_d)
+        self.linear2 = nn.Linear(dim_feedforward, d_model)
 
-        self.norm1 = nn.LayerNorm(q_d)
-        self.norm2 = nn.LayerNorm(q_d)
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
         self.dropout1 = nn.Dropout(dropout)
         self.dropout2 = nn.Dropout(dropout)
 
         self.activation = _get_activation_fn(activation)
 
-    def __setstate__(self, state):
-        if 'activation' not in state:
-            state['activation'] = F.relu
-        super(nn.Module, self).__setstate__(state)
-
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: Tensor, src_mask=None, src_key_padding_mask=None) -> Tensor:
         """
         Args:
             x (Tensor): shape B, n_t, n_v, d
@@ -48,20 +43,19 @@ class FactorizedDotProdAttTransformerEncoderLayer(nn.Module):
         B, nt, nv, d = x.size()
         assert x.ndim == 4, "X's shape must form (B, n_t, n_v, d)"
         assert d == self.self_sattn.embed_dim == self.self_tattn.embed_dim
-        assert nt * d == self.self_tattn.kdim
-        assert nv * d == self.self_sattn.kdim
         
-        x = x.reshape(B, nt * nv, d)
-        xs = x.reshape(B, nt, nv * d)
-        xt = x.reshape(B, nv, nt * d)
+        x_3d = x.reshape(B, nt * nv, d)
+        xs = x.reshape(B * nt, nv, d)
+        xt = x.transpose(1, 2).reshape(B * nv, nt, d)
 
-        x_s = self.self_sattn(x, xs, xs)[0]
-        x_t = self.self_tattn(x, xt, xt)[0]
-        x2 = torch.cat([x_s, x_t], dim=1)
+        x_s = self.self_sattn(xs, xs, xs)[0].reshape(B, nt * nv, d)
+        x_t = self.self_tattn(xt, xt, xt)[0].reshape(B, nv, nt, d).transpose(1, 2).reshape(B, nt * nv, d)
+        x2 = torch.cat([x_s, x_t], dim=2)
         
-        x = x + self.dropout1(self.sublin(x2))
-        x = self.norm1(x)
-        x2 = self.linear2(self.dropout(self.activation(self.linear1(x))))
-        x = x + self.dropout2(x2)
-        x = self.norm2(x)
-        return x
+        x2 = self.dropout1(self.sublin(x2))
+        x2 = self.norm1(x2)
+        x2 = self.linear2(self.dropout(self.activation(self.linear1(x2))))
+        x2 = x_3d + self.dropout2(x2)
+        x2 = self.norm2(x2)
+        x2 = x2.reshape(B, nt, nv, d)
+        return x2

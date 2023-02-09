@@ -12,13 +12,12 @@ class FactorizedSelfAttEncoder(Encoder):
         enc_layer = FSAT(ds_model, dt_model, nhead, dim_feedforward, dropout, activation)
         self.dt_model = dt_model
         self.encoder = nn.TransformerEncoder(enc_layer, n_enc_layers, norm=None)
-    
+
     @property
     def out_dim(self) -> int:
-        return self.dt_model
+        return 80
 
     def forward(self, x: Tensor) -> Tensor: 
         assert x.ndim == 4, "X's shape must have the form `(B, nt, nv, d)`."
         x = self.encoder(x)
-
         return x
