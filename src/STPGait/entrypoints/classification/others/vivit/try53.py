@@ -10,10 +10,10 @@ from .....enums import Label, Optim, Separation
 from .....models.others.vivit import ViViT, Encoder1
 from .....preprocess.main import PreprocessingConfig
 from ....train import TrainEntrypoint
-from .try48 import Entrypoint as E
+from .try47 import Entrypoint as E
 
 
-# Try 55 (48 ->)
+# Try 53 (47 ->)
 # Use anxious-hypokinetic_frontal-healthy labels
 class Entrypoint(E):
     def __init__(self) -> None:
@@ -26,8 +26,8 @@ class Entrypoint(E):
                 proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)))
             )
         config = BaseConfig(
-            try_num=55,
-            try_name="vivit_m4_t40_f400",
+            try_num=53,
+            try_name="vivit_m3_t40_f400",
             device="cuda:0",
             eval_batch_size=32,
             save_log_in_file=True,
