@@ -3,8 +3,9 @@ from abc import abstractmethod, ABC
 from torch import nn, Tensor
 
 class Encoder(nn.Module, ABC):
-    @abstractmethod
+
     @property
+    @abstractmethod
     def out_dim(self) -> int:
         """ Output dimension of transformer encoder """
 

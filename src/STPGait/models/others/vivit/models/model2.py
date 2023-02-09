@@ -6,7 +6,7 @@ from .encoder import Encoder
 class FactorizedEncoder(Encoder):
     """ Model 2 """
     def __init__(self, d_model, nhead, n_enc_layers, dim_feedforward=2048, dropout=0.1, activation="relu"):
-        super(nn.Module, self).__init__()
+        super().__init__()
         
         s_enc_layer = nn.TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
         self.s_encoder = nn.TransformerEncoder(

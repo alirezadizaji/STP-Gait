@@ -7,7 +7,7 @@ from ..submodules import FactorizedSelfAttTransformerEncoderLayer as FSAT
 class FactorizedSelfAttEncoder(Encoder):
     """ Model 3 """
     def __init__(self, ds_model, dt_model, nhead, n_enc_layers, dim_feedforward=2048, dropout=0.1, activation="relu"):
-        super(nn.Module, self).__init__()
+        super().__init__()
 
         enc_layer = FSAT(ds_model, dt_model, nhead, dim_feedforward, dropout, activation)
         self.dt_model = dt_model
@@ -16,7 +16,7 @@ class FactorizedSelfAttEncoder(Encoder):
     @property
     def out_dim(self) -> int:
         return self.dt_model
-        
+
     def forward(self, x: Tensor) -> Tensor: 
         assert x.ndim == 4, "X's shape must have the form `(B, nt, nv, d)`."
         x = self.encoder(x)

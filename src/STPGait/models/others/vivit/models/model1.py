@@ -5,7 +5,7 @@ from .encoder import Encoder
 class SpatioTemporalEncoder(Encoder):
     """ Model 1 """
     def __init__(self, d_model, nhead, n_enc_layers, dim_feedforward=2048, dropout=0.1, activation="relu"):
-        super(nn.Module, self).__init__()
+        super().__init__()
 
         self.d = d_model
         enc_layer = nn.TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
@@ -15,7 +15,7 @@ class SpatioTemporalEncoder(Encoder):
     @property
     def out_dim(self) -> int:
         return self.d
-        
+
     def forward(self, x: Tensor) -> Tensor:
         assert x.ndim == 4, "X's shape must have form of `(B, nt, nv, d)`."
         B, nt, nv, d = x.size()

@@ -34,5 +34,5 @@ class Entrypoint(E):
     def get_model(self):
         encoder = Encoder2(80, 8, 3)
         num_classes = self.kfold._ulabels.size
-        model = ViViT(num_classes, encoder)
+        model = ViViT(250, num_classes, encoder)
         return model
