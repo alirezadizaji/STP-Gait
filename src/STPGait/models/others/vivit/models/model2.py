@@ -5,26 +5,26 @@ from .encoder import Encoder
 
 class FactorizedEncoder(Encoder):
     """ Model 2 """
-    def __init__(self, ds_model, dt_model, nhead, n_enc_layers, dim_feedforward=2048, dropout=0.1, activation="relu"):
+    def __init__(self, d_model, nhead, n_enc_layers, dim_feedforward=2048, dropout=0.1, activation="relu"):
         super(nn.Module, self).__init__()
         
-        s_enc_layer = nn.TransformerEncoderLayer(ds_model, nhead, dim_feedforward, dropout, activation)
+        s_enc_layer = nn.TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
         self.s_encoder = nn.TransformerEncoder(
             encoder_layer=s_enc_layer,
             num_layers=n_enc_layers, 
             norm=None)
 
-        t_enc_layer = nn.TransformerEncoderLayer(dt_model, nhead, dim_feedforward, dropout, activation)
+        t_enc_layer = nn.TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation)
         self.t_encoder = nn.TransformerEncoder(
             encoder_layer=t_enc_layer,
             num_layers=n_enc_layers, 
             norm=None)
 
-        self.dt_model = dt_model
+        self.d_model = d_model
 
     @property
     def out_dim(self) -> int:
-        return self.dt_model
+        return self.d_model
 
     def forward(self, x: Tensor) -> Tensor:
         assert x.ndim == 4, "X's shape must have form of `(B, nt, nv, d)`."

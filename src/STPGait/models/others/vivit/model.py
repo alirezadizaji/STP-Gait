@@ -6,7 +6,7 @@ from torch import nn, Tensor
 from .models.encoder import Encoder
 
 class ViViT(nn.Module):
-    def __init__(self, num_classes: int, encoder: Encoder, dropout: int = 0.2):
+    def __init__(self, num_classes: int, encoder: Encoder, dropout: int = 0.1):
         self.encoder = encoder
 
         self.fc = nn.Sequential(
