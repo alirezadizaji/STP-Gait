@@ -4,3 +4,4 @@ from .gcn_transformer import GCNTransformer
 from .transformer_m import Transformer
 from .gcn_semisupervised import GCNSemiSupervised
 from .gcn_3l_bn import GCN_3l_BN
+from .encoder_based import SimpleTransformer
