@@ -33,7 +33,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
             try_num=57,
             try_name="ms_g3d",
             device="cuda:0",
-            eval_batch_size=12,
+            eval_batch_size=1,
             save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50, batch_size=12)
         )
