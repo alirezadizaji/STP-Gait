@@ -10,9 +10,6 @@ from ....preprocess.main import PreprocessingConfig
 from .try3 import Entrypoint as E
 from ...train import TrainEntrypoint
 
-IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
-OUT = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
-
 # try 4 (try 3 ->)
 ## Edge attributes added: 0 -> has at least one invalid node, 1 -> both nodes are valid.
 class Entrypoint(E):
@@ -28,7 +25,7 @@ class Entrypoint(E):
             try_num=4,
             try_name="lstm_gcn_transformer",
             device="cuda:0",
-            eval_batch_size=1,
+            eval_batch_size=32,
             save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )

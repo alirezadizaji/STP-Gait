@@ -27,7 +27,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
             try_num=1,
             try_name="transformer",
             device="cuda:0",
-            eval_batch_size=1,
+            eval_batch_size=32,
             save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )

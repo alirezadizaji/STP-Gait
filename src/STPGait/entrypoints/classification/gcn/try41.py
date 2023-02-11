@@ -27,7 +27,7 @@ class Entrypoint(E):
             try_num=41,
             try_name="gcn3l_m2_I_60_offset_30",
             device="cuda:0",
-            eval_batch_size=1,
+            eval_batch_size=32,
             save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )

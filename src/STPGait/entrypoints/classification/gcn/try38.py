@@ -38,7 +38,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
             try_num=38,
             try_name="triple_gcn3l_m2_I_60_offset_30",
             device="cuda:0",
-            eval_batch_size=1,
+            eval_batch_size=32,
             save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
@@ -102,8 +102,6 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         y_pred, yl, yu, *b = x
     
         if y_pred is not None:
-            x_probs = x[0]
-            y_pred = x_probs.argmax(-1)
             y = data[1]
             self.correct_sup += torch.sum(y_pred == y[labeled]).item()
             self.total_sup += y.numel()
@@ -119,8 +117,6 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         y_pred, yl, yu, *b = x
 
         if y_pred is not None:
-            x_probs = x[0]
-            y_pred = x_probs.argmax(-1)
             y = data[1]
             self.correct_sup += torch.sum(y_pred == y[labeled]).item()
             self.total_sup += y.numel()

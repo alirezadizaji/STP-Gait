@@ -33,7 +33,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
             try_num=57,
             try_name="ms_g3d",
             device="cuda:0",
-            eval_batch_size=1,
+            eval_batch_size=32,
             save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50, batch_size=12)
         )
@@ -79,7 +79,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
     def _train_iter_end(self, iter_num: int, loss: torch.Tensor, x: OUT, data: IN) -> None:
         self.losses.append(loss.item())
 
-        x_probs = x[0]
+        x_probs = x
         y_pred = x_probs.argmax(-1)
         y = data[1]
         self.correct += torch.sum(y_pred == y).item()
@@ -92,7 +92,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         if ~np.isnan(loss.item()):
             self.losses.append(loss.item())
         
-        x_probs = x[0]
+        x_probs = x
         y_pred = x_probs.argmax(-1)
         y = data[1]
         self.correct += torch.sum(y_pred == y).item()
