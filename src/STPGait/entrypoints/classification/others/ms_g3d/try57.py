@@ -7,17 +7,15 @@ from .....config import BaseConfig, TrainingConfig
 from .....data.read_gait_data import ProcessingGaitConfig
 from .....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
 from .....enums import Optim, Separation
-from .....models.others.vivit import ViViT, Encoder1
+from .....models.others.msg3d.model import Model
 from .....preprocess.main import PreprocessingConfig
 from ....train import TrainEntrypoint
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = torch.Tensor
 
-# Try 45
-# Model: ViViT (Encoder1)
-# Frames are pruned to 400 count
-# Tokenization: 40 Frames, Each single node is considered as spatial.
+# Try 57
+# Model: MS-G3D
 # KFOLD = 5, Validation and Test are the same
 # Filterout hardcases
 # Filterout unlabeled cases
@@ -32,22 +30,14 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
                 proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)))
             )
         config = BaseConfig(
-            try_num=45,
-            try_name="vivit_m1_t40_f400",
+            try_num=57,
+            try_name="ms_g3d",
             device="cuda:0",
             eval_batch_size=32,
             save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
         TrainEntrypoint.__init__(self, kfold, config)
-
-    @property
-    def frame_size(self):
-        return 400
-    
-    @property
-    def chunk_size(self):
-        return 10
 
     @property
     def criteria_names(self) -> List[str]:
@@ -58,16 +48,18 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         return self.criteria_names.index('ACC')
        
     def get_model(self):
-        encoder = Encoder1(80, 8, 3)
         num_classes = self.kfold._ulabels.size
-        model = ViViT(250, num_classes, encoder)
+        model = Model(
+            num_class=num_classes,
+            num_point=25,
+            num_person=1,
+            num_gcn_scales=13,
+            num_g3d_scales=6)
         return model
         
     def _model_forwarding(self, data: IN) -> OUT:
-        x = data[0]
-        x = x[:, :self.frame_size, :, [0, 1]]          # B, T, V, C
-        x = torch.stack(x.split(self.chunk_size, 1), dim=3) # B, T1, V, T2, C
-        x = x.flatten(3).to(self.conf.device)  # B, T1, V, D
+        x = data[0]     # B, T, V, C
+        x = x.permute(0, 3, 1, 2)[..., None] # B, C, T, V, M
         x = self.model(x)
         return x
 
