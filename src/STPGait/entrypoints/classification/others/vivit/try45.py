@@ -60,7 +60,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
     def get_model(self):
         encoder = Encoder1(80, 8, 3)
         num_classes = self.kfold._ulabels.size
-        model = ViViT(250, num_classes, encoder)
+        model = ViViT(num_classes, encoder)
         return model
         
     def _model_forwarding(self, data: IN) -> OUT:
