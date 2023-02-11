@@ -19,14 +19,18 @@ class ViViT(nn.Module):
         )
 
     def forward(self, x: Tensor) -> Tensor:
-        _, n_temporal, n_spatial, _ = x.size()
+        _, n_temporal, n_spatial, d = x.size()
         if self.pe is None:
-            self.pe = nn.Parameter(torch.randn(1, n_temporal, n_spatial))
-
+            self.pe = nn.Parameter(torch.randn(1, n_temporal, n_spatial, d)).to(x.device)
+        
         x = x + self.pe
         x = self.encoder(x)
         
-        x = torch.mean(x, dim=(1, x.ndim - 1))
+        if x.ndim == 4:
+            d1, *_, d4 = x.size()
+            x = x.reshape(d1, -1 , d4)
+
+        x = torch.mean(x, dim=1)
         x = self.fc(x)
 
         return x
