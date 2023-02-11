@@ -5,7 +5,7 @@ import numpy as np
 from ..submodules.ms_tcn import MultiScale_TemporalConv as MS_TCN
 from ..submodules.mlp import MLP
 from ..submodules.activation import activation_factory
-from graph.tools import k_adjacency, normalize_adjacency_matrix
+from ..graph.tools import k_adjacency, normalize_adjacency_matrix
 
 
 class UnfoldTemporalWindows(nn.Module):

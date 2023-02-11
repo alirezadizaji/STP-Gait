@@ -1,6 +1,5 @@
 """ This is EXACTLY same implementation of MS-G3D from this repo: https://github.com/kenziyuliu/MS-G3D """
 
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
