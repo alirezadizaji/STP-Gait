@@ -53,8 +53,8 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
             num_class=num_classes,
             num_point=25,
             num_person=1,
-            num_gcn_scales=13,
-            num_g3d_scales=6)
+            num_gcn_scales=7,
+            num_g3d_scales=4)
         return model
         
     def _model_forwarding(self, data: IN) -> OUT:
