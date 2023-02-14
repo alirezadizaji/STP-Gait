@@ -3,8 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from st_gcn.utils.tgcn import ConvTemporalGraphical
-from st_gcn.utils.graph import Graph
+from .utils.tgcn import ConvTemporalGraphical
+from .utils.graph import Graph
 
 class Model(nn.Module):
     r"""Spatial temporal graph convolutional networks.
@@ -26,11 +26,13 @@ class Model(nn.Module):
             :math:`M_{in}` is the number of instance in a frame.
     """
 
-    def __init__(self, in_channels, num_class, graph_args,
-                 edge_importance_weighting, **kwargs):
+    def __init__(self, in_channels, num_class, edge_importance_weighting, graph_args,
+                 **kwargs):
         super().__init__()
 
         # load graph
+        if graph_args is None:
+            graph_args = {}
         self.graph = Graph(**graph_args)
         A = torch.tensor(self.graph.A, dtype=torch.float32, requires_grad=False)
         self.register_buffer('A', A)

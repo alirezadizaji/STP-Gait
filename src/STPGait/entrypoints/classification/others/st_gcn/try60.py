@@ -7,7 +7,7 @@ from .....config import BaseConfig, TrainingConfig
 from .....data.read_gait_data import ProcessingGaitConfig
 from .....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
 from .....enums import Optim, Separation
-from .....models.others.st_gcn import st_gcn
+from .....models.others.st_gcn.st_gcn import Model
 from .....preprocess.main import PreprocessingConfig
 from ....train import TrainEntrypoint
 
@@ -25,7 +25,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
             config=SkeletonKFoldConfig(
                 kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0, filterout_unlabeled=True),
                 filterout_hardcases=True,
-                load_dir="../../Data/output_1.pkl",
+                load_dir="./Data/output_1.pkl",
                 savename="processed_120c.pkl",
                 proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)))
             )
@@ -49,13 +49,13 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
        
     def get_model(self):
         num_classes = self.kfold._ulabels.size
-        model = st_gcn(2, num_classes, None, True)
+        model = Model(2, num_classes, True, None)
         return model
         
     def _model_forwarding(self, data: IN) -> OUT:
         x = data[0]    # B=batch size, T, V, C=3
         x = x[..., [0,1]]  # B=batch size, T, V, C=2
-        x = torch.transpose(x, 1, 3) # B=batch size, C=2, T, V
+        x = torch.permute(x, (0, 3, 1, 2)) # B=batch size, C=2, T, V
         x = torch.unsqueeze(x, dim=-1)
         # N=b, C=in_channel, T=length of input sequence, V=number of graph nodes, M=number of instance in a frame
         x = self.model(x)

@@ -10,7 +10,7 @@ from .....enums import Optim, Separation, Label
 from .....models.others.st_gcn import st_gcn
 from .....preprocess.main import PreprocessingConfig
 from ....train import TrainEntrypoint
-from .try60 import Entrypoint as E
+from .try63 import Entrypoint as E
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = torch.Tensor
