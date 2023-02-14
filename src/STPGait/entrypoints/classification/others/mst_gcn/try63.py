@@ -14,8 +14,8 @@ from ....train import TrainEntrypoint
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = torch.Tensor
 
-# Try60 ST-GCN
-# Model: ST-GCN 
+# Try63 
+# Model: MST-GCN 
 # KFOLD = 5, Validation and Test are the same
 # Filterout hardcases
 # Filterout unlabeled cases
@@ -31,7 +31,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
             )
         config = BaseConfig(
             try_num=60,
-            try_name="stgcn-6classes",
+            try_name="mstgcn-6classes",
             device="cuda:0",
             eval_batch_size=32,
             save_log_in_file=True,

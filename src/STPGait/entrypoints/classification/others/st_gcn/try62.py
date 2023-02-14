@@ -30,7 +30,7 @@ class Entrypoint(E):
             )
         config = BaseConfig(
             try_num=62,
-            try_name="stgcn-3classes",
+            try_name="stgcn-3classes-ataxic",
             device="cuda:0",
             eval_batch_size=32,
             save_log_in_file=True,

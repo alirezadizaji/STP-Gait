@@ -15,7 +15,7 @@ from .try60 import Entrypoint as E
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = torch.Tensor
 
-# Try 61 (60 ->)
+# Try 64 (63 ->)
 # Use anxious-hypokinetic_frontal-healthy labels
 class Entrypoint(E):
     def __init__(self) -> None:
@@ -29,8 +29,8 @@ class Entrypoint(E):
                 proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)))
             )
         config = BaseConfig(
-            try_num=61,
-            try_name="stgcn-3classes-anxious",
+            try_num=64,
+            try_name="mstgcn-3classes-anxious",
             device="cuda:0",
             eval_batch_size=32,
             save_log_in_file=True,
