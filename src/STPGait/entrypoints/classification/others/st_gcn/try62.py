@@ -15,11 +15,8 @@ from .try60 import Entrypoint as E
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = torch.Tensor
 
-# Try2 ST-GCN
-# Model: ST-GCN 
-# KFOLD = 5, Validation and Test are the same
-# Filterout hardcases
-# Filterout unlabeled cases
+# Try 62 (60 ->)
+# Use ataxic-hypokinetic_frontal-healthy labels
 class Entrypoint(E):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(

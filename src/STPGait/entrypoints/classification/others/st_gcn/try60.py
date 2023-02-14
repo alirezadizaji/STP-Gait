@@ -49,24 +49,24 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
        
     def get_model(self):
         num_classes = self.kfold._ulabels.size
-        #TODO: Check with Razieh
         model = st_gcn(2, num_classes, None, True)
         return model
         
     def _model_forwarding(self, data: IN) -> OUT:
-        x = data[0]    # B=batch size, T, V, C=25
-        x = x[..., [0,1]]
-        # N, in_channels, T_{in}, V_{in}, M_{in}
-        # N=b, C, T=length of input sequence, V=number of graph nodes, M=number of instance in a frame
-        #TODO: reshape
+        x = data[0]    # B=batch size, T, V, C=3
+        x = x[..., [0,1]]  # B=batch size, T, V, C=2
+        x = torch.transpose(x, 1, 3) # B=batch size, C=2, T, V
+        x = torch.unsqueeze(x, dim=-1)
+        # N=b, C=in_channel, T=length of input sequence, V=number of graph nodes, M=number of instance in a frame
         x = self.model(x)
         return x
 
     def _calc_loss(self, x: OUT, data: IN) -> torch.Tensor:
         y = data[1]
-        #TODO: calc loss
         idx = torch.arange(y.numel())
-        loss = -torch.mean(x[idx, y]) #CE
+        m = torch.nn.LogSoftmax(dim=1)
+        output = m(x)
+        loss = -torch.mean(output[idx, y]) #CE
         return loss
 
     def _train_start(self) -> None:
