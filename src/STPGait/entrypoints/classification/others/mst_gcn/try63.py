@@ -12,7 +12,7 @@ from .....preprocess.main import PreprocessingConfig
 from ....train import TrainEntrypoint
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
-OUT = torch.Tensor
+OUT = Tuple[torch.Tensor, torch.Tensor]
 
 # Try63 
 # Model: MST-GCN 
@@ -34,8 +34,8 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
             try_name="mstgcn-6classes",
             device="cuda:0",
             eval_batch_size=32,
-            save_log_in_file=False,
-            training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
+            save_log_in_file=True,
+            training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50, batch_size=8)
         )
         TrainEntrypoint.__init__(self, kfold, config)
 
@@ -49,7 +49,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
        
     def get_model(self):
         num_classes = self.kfold._ulabels.size
-        basic_channels = 112
+        basic_channels = 32
         cfgs = {
         'num_class': num_classes,
         'num_point': 25,
@@ -88,7 +88,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         y = data[1]
         idx = torch.arange(y.numel())
         m = torch.nn.LogSoftmax(dim=1)
-        output = m(x)
+        output = m(x[1])
         loss = -torch.mean(output[idx, y]) #CE
         return loss
 
@@ -102,7 +102,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
     def _train_iter_end(self, iter_num: int, loss: torch.Tensor, x: OUT, data: IN) -> None:
         self.losses.append(loss.item())
 
-        x_probs = x
+        x_probs = x[1]
         y_pred = x_probs.argmax(-1)
         y = data[1]
         self.correct += torch.sum(y_pred == y).item()
@@ -115,7 +115,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         if ~np.isnan(loss.item()):
             self.losses.append(loss.item())
         
-        x_probs = x
+        x_probs = x[1]
         y_pred = x_probs.argmax(-1)
         y = data[1]
         self.correct += torch.sum(y_pred == y).item()
@@ -139,4 +139,3 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         val = self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch, self.best_epoch_criterion_idx]
         best = self._criteria_vals[self._VAL_CRITERION_IDX, best_epoch, self.best_epoch_criterion_idx]
         return val > best
-

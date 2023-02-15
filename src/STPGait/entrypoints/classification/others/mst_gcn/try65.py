@@ -33,7 +33,7 @@ class Entrypoint(E):
             device="cuda:0",
             eval_batch_size=32,
             save_log_in_file=True,
-            training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
+            training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50, batch_size=8)
         )
         TrainEntrypoint.__init__(self, kfold, config)
 
