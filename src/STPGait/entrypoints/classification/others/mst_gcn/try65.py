@@ -7,7 +7,6 @@ from .....config import BaseConfig, TrainingConfig
 from .....data.read_gait_data import ProcessingGaitConfig
 from .....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
 from .....enums import Optim, Separation, Label
-from .....models.others.st_gcn import st_gcn
 from .....preprocess.main import PreprocessingConfig
 from ....train import TrainEntrypoint
 from .try63 import Entrypoint as E
@@ -24,12 +23,12 @@ class Entrypoint(E):
                 kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0, filterout_unlabeled=True, 
                                          remove_labels= [Label.ANXIOUS, Label.SENSORY_ATAXIC, Label.PARETIC]),
                 filterout_hardcases=True,
-                load_dir="../../Data/output_1.pkl",
+                load_dir="./Data/output_1.pkl",
                 savename="processed_120c.pkl",
                 proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)))
             )
         config = BaseConfig(
-            try_num=62,
+            try_num=65,
             try_name="mstgcn-3classes-ataxic",
             device="cuda:0",
             eval_batch_size=32,

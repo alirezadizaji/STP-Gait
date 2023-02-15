@@ -7,7 +7,7 @@ from .....config import BaseConfig, TrainingConfig
 from .....data.read_gait_data import ProcessingGaitConfig
 from .....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
 from .....enums import Optim, Separation
-from .....models.others.st_gcn import st_gcn
+from .....models.others.mst_gcn.model.AEMST_GCN import Model
 from .....preprocess.main import PreprocessingConfig
 from ....train import TrainEntrypoint
 
@@ -25,16 +25,16 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
             config=SkeletonKFoldConfig(
                 kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0, filterout_unlabeled=True),
                 filterout_hardcases=True,
-                load_dir="../../Data/output_1.pkl",
+                load_dir="./Data/output_1.pkl",
                 savename="processed_120c.pkl",
                 proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)))
             )
         config = BaseConfig(
-            try_num=60,
+            try_num=63,
             try_name="mstgcn-6classes",
             device="cuda:0",
             eval_batch_size=32,
-            save_log_in_file=True,
+            save_log_in_file=False,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
         TrainEntrypoint.__init__(self, kfold, config)
@@ -49,13 +49,36 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
        
     def get_model(self):
         num_classes = self.kfold._ulabels.size
-        model = st_gcn(2, num_classes, None, True)
+        basic_channels = 112
+        cfgs = {
+        'num_class': num_classes,
+        'num_point': 25,
+        'num_person': 1,
+        'block_args': [[2, basic_channels, False, 1],
+                       [basic_channels, basic_channels, True, 1], [basic_channels, basic_channels, True, 1], [basic_channels, basic_channels, True, 1],
+                       [basic_channels, basic_channels*2, True, 1], [basic_channels*2, basic_channels*2, True, 1], [basic_channels*2, basic_channels*2, True, 1],
+                       [basic_channels*2, basic_channels*4, True, 1], [basic_channels*4, basic_channels*4, True, 1], [basic_channels*4, basic_channels*4, True, 1]],
+        # 'graph': 'graph.kinetics.Graph',
+        'graph_args': {'labeling_mode': 'spatial'},
+        'kernel_size': 9,
+        'block_type': 'ms',
+        'reduct_ratio': 2,
+        'expand_ratio': 0,
+        't_scale': 4,
+        'layer_type': 'sep',
+        'act': 'relu',
+        's_scale': 4,
+        'atten': 'stcja',
+        'bias': True,
+        # 'parts': parts
+        }
+        model = Model(**cfgs)
         return model
         
     def _model_forwarding(self, data: IN) -> OUT:
         x = data[0]    # B=batch size, T, V, C=3
         x = x[..., [0,1]]  # B=batch size, T, V, C=2
-        x = torch.transpose(x, 1, 3) # B=batch size, C=2, T, V
+        x = torch.permute(x, (0, 3, 1, 2)) # B=batch size, C=2, T, V
         x = torch.unsqueeze(x, dim=-1)
         # N=b, C=in_channel, T=length of input sequence, V=number of graph nodes, M=number of instance in a frame
         x = self.model(x)
