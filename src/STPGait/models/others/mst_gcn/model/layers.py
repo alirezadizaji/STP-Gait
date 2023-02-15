@@ -7,7 +7,7 @@ import numpy as np
 import math
 import sys
 sys.path.append('../')
-from model.utils import import_class, conv_branch_init, conv_init, bn_init
+from .utils import import_class, conv_branch_init, conv_init, bn_init
 
 
 class Basic_Layer(nn.Module):

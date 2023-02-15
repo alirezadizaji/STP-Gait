@@ -3,7 +3,7 @@ from torch import nn
 import sys
 sys.path.append('../')
 
-from model.activations import HardSwish
+from .activations import HardSwish
 
 class Attention_Layer(nn.Module):
     def __init__(self, out_channel, att_type, act, **kwargs):
