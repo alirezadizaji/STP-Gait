@@ -3,7 +3,7 @@ from typing import List
 from dig.xgraph.models import GCN_3l_BN, GCNConv, GlobalMeanPool
 import torch
 from torch import nn, Tensor
-from torch_geometric.data import Batch
+from torch_geometric.data import Batch, Data
 
 class _GCNConv(nn.Module):
     def __init__(self, d1: int, d2: int):
@@ -39,9 +39,9 @@ class GCNCCT(nn.Module):
     def __init__(self, num_classes: int, num_shared_gcn: int, dim_node: int, dim_hidden: int, num_aux_cls: int = 8):
         super().__init__()
         
-        self.shared: GCN_3l_BN = nn.Sequential(
-            _GCNConv(dim_node, dim_hidden),
-            *[_GCNConv(dim_hidden, dim_hidden) for _ in range(num_shared_gcn - 1)]
+        self.shared: nn.ModuleList = nn.ModuleList(
+            [_GCNConv(dim_node, dim_hidden)] +
+            [_GCNConv(dim_hidden, dim_hidden) for _ in range(num_shared_gcn - 1)]
         )
 
         self.main = _GCNConvFC(dim_hidden, num_classes)
@@ -50,22 +50,30 @@ class GCNCCT(nn.Module):
 
         self._num_splits: int = num_aux_cls + 1
 
-    def forward(self, data: Batch) -> Tensor:
-        x, edge_index, batch = data.x, data.edge_index, data.batch
+    def forward(self, x: Tensor, edge_index: Tensor) -> Tensor:
+        B, T, V, _ = x.size()
 
-        T = x.size(1)
+        x = x.flatten(1, -2) # N, T*V, D
+        data = Batch.from_data_list([Data(x=x_, edge_index=edge_index) for x_ in x])
+        x = data.x
+
         window_size = T // self._num_splits
         si = window_size * (1 + torch.arange(self._num_splits - 1))
-        fi = torch.arange(T, dtype=torch.int).repeat(2)
+        fi = torch.arange(T, dtype=torch.int64).repeat(2)
 
-        x = self.shared(x, edge_index)
+        for s in self.shared:
+            x = s(x, data.edge_index)
 
-        o_main = self.main(x, edge_index, batch)        # B, C
+        o_main = self.main(x, data.edge_index, data.batch)        # B, C
+        x = x.reshape(B, T, V, -1)
+
         o_auxs: List[torch.Tensor] = list()
         for i in range(self._num_splits - 1):
-            idx = fi[si: si + T]
-            o_auxs.append(self.auxs[i](x[:, idx], edge_index, batch))
+            idx = fi[si[i]: si[i] + T]
+
+            o_aux = self.auxs[i](x[:, idx].flatten(0, -2), data.edge_index, data.batch)
+            o_auxs.append(o_aux)
+
         o_aux = torch.stack(o_auxs, dim=1)              # B, A, C
 
         return o_main, o_aux
-

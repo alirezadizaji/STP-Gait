@@ -24,7 +24,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(
             config=SkeletonKFoldConfig(
-                kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0),
+                kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0, filterout_unlabeled=False),
                 load_dir="../../Data/output_1.pkl",
                 filterout_hardcases=True,
                 savename="processed_120c.pkl",
@@ -54,11 +54,9 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         x = data[0][..., [0, 1]].to(self.conf.device) # Use X-Y features
 
         if self._edge_index is None:
-            self._edge_index = self._get_edges(x.size(1))
-        x = x.flatten(1, -2) # N, T*V, D
-        data = Batch.from_data_list([Data(x=x_, edge_index=self._edge_index) for x_ in x])
-        data = data.to(x.device)
-        out: OUT = self.model(data)
+            self._edge_index = self._get_edges(x.size(1)).to(x.device)
+
+        out: OUT = self.model(x, self._edge_index)
         return out
 
     def _calc_loss(self, x: OUT, data: IN) -> torch.Tensor:
@@ -87,7 +85,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         self.losses.append(loss.item())
 
         _, y, _, labeled = data
-        x_probs = x[1][labeled]
+        x_probs = x[0][labeled]
         y_pred = x_probs.argmax(-1)
         self.correct += torch.sum(y_pred == y[labeled]).item()
         self.total += y.numel()
@@ -100,7 +98,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
             self.losses.append(loss.item())
         
         _, y, _, labeled = data
-        x_probs = x[1][labeled]
+        x_probs = x[0][labeled]
         y_pred = x_probs.argmax(-1)
         self.correct += torch.sum(y_pred == y[labeled]).item()
         self.total += y.numel()
