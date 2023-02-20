@@ -88,7 +88,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         x_probs = x[0][labeled]
         y_pred = x_probs.argmax(-1)
         self.correct += torch.sum(y_pred == y[labeled]).item()
-        self.total += y.numel()
+        self.total += y[labeled].numel()
 
         if iter_num % 20 == 0:
             print(f'epoch {self.epoch} iter {iter_num} loss value {np.mean(self.losses)}', flush=True)
@@ -101,7 +101,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         x_probs = x[0][labeled]
         y_pred = x_probs.argmax(-1)
         self.correct += torch.sum(y_pred == y[labeled]).item()
-        self.total += y.numel()
+        self.total += y[labeled].numel()
 
     def _train_epoch_end(self) -> np.ndarray:
         loss = np.mean(self.losses)

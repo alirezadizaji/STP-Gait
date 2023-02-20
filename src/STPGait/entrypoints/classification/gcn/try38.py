@@ -104,7 +104,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         if y_pred is not None:
             y = data[1]
             self.correct_sup += torch.sum(y_pred == y[labeled]).item()
-            self.total_sup += y.numel()
+            self.total_sup += y[labeled].numel()
 
         self.correct_all += torch.sum(yl == yu).item()
         self.total_all += yl.numel()
@@ -119,7 +119,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         if y_pred is not None:
             y = data[1]
             self.correct_sup += torch.sum(y_pred == y[labeled]).item()
-            self.total_sup += y.numel()
+            self.total_sup += y[labeled].numel()
 
         self.correct_all += torch.sum(yl == yu).item()
         self.total_all += yl.numel()
