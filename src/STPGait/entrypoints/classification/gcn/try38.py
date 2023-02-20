@@ -110,7 +110,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         self.total_all += yl.numel()
 
         if iter_num % 20 == 0:
-            print(f'\t\tepoch{self.epoch} loss value {np.mean(self.losses)}, sloss {np.mean(self.sup_losses)}, ulloss {np.mean(self.unsups_lower)}, uuloss {np.mean(self.unsups_upper)}; acc supervised {self.correct_sup / self.total_sup}, unsupervised {self.correct_all / self.total_all}', flush=True)
+            print(f'\t\tepoch{self.epoch} loss value {np.mean(self.losses)}, sloss {np.mean(self.sup_losses)}, ulloss {np.mean(self.unsups_lower)}, uuloss {np.mean(self.unsups_upper)}; acc supervised {self.correct_sup / (self.total_sup + 1e-4)}, unsupervised {self.correct_all / (self.total_all + 1e-4)}', flush=True)
 
     def _eval_iter_end(self, separation: Separation, iter_num: int, loss: torch.Tensor, x: OUT, data: IN) -> None:
         y, labeled = data[1], data[3]
@@ -131,8 +131,8 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         ulloss = np.mean(self.unsups_lower)
         uuloss = np.mean(self.unsups_upper)
 
-        acc = self.correct_sup / self.total_sup
-        uacc = self.correct_all / self.total_all
+        acc = self.correct_sup / (self.total_sup + 1e-4)
+        uacc = self.correct_all / (self.total_all + 1e-4)
         print(f'\tepoch{self.epoch} loss value {loss}, sloss {sloss}, ulloss {ulloss}, uuloss {uuloss}; acc supervised {acc}, unsupervised {uacc}', flush=True)
 
         return np.array([loss, sloss, ulloss, uuloss, acc])
@@ -143,8 +143,8 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         ulloss = np.mean(self.unsups_lower)
         uuloss = np.mean(self.unsups_upper)
 
-        acc = self.correct_sup / self.total_sup
-        uacc = self.correct_all / self.total_all
+        acc = self.correct_sup / (self.total_sup + 1e-4)
+        uacc = self.correct_all / (self.total_all + 1e-4)
         print(f'\tepoch{self.epoch} separation {datasep}, loss value {loss}, sloss {sloss}, ulloss {ulloss}, uuloss {uuloss}; acc supervised {acc}, unsupervised {uacc}', flush=True)
 
         return np.array([loss, sloss, ulloss, uuloss, acc])

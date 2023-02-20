@@ -105,13 +105,13 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
     def _train_epoch_end(self) -> np.ndarray:
         loss = np.mean(self.losses)
-        acc = self.correct / self.total
+        acc = self.correct / (self.total + 1e-4)
         print(f'epoch{self.epoch} loss value {loss} acc {acc}', flush=True)
 
         return np.array([loss, acc])
 
     def _eval_epoch_end(self, datasep: Separation) -> np.ndarray:
-        acc = self.correct / self.total
+        acc = self.correct / (self.total + 1e-4)
         loss = np.mean(self.losses)
         print(f'epoch {self.epoch} separation {datasep} loss value {loss} acc {acc}', flush=True)
         return np.array([loss, acc])
