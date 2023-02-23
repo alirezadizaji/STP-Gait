@@ -34,7 +34,7 @@ class WiFaCCT(nn.Module, Generic[M1, M2]):
         for i in range(self._num_splits - 1):
             idx = fi[si[i]: si[i] + T]
 
-            o_aux = self.auxs[i](x[:, idx].flatten(0, -2), **m2_args)
+            o_aux = self.auxs[i](x[:, idx], **m2_args)
             o_auxs.append(o_aux)
 
         o_aux = torch.stack(o_auxs, dim=1)              # B, A, C

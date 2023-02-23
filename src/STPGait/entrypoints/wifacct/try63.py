@@ -35,7 +35,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
             try_name="gcn_cct",
             device="cuda:0",
             eval_batch_size=32,
-            save_log_in_file=True,
+            save_log_in_file=False,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
         TrainEntrypoint.__init__(self, kfold, config)
@@ -48,13 +48,23 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         dim_node=2
         dim_hidden=60
 
-        model1 = nn.ModuleList(
-            [GCNConv(dim_node, dim_hidden)] +
-            [GCNConv(dim_hidden, dim_hidden) for _ in range(num_shared_gcn - 1)]
-        )
+        class M1(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.ml = nn.ModuleList(
+                    [GCNConv(dim_node, dim_hidden)] +
+                    [GCNConv(dim_hidden, dim_hidden) for _ in range(num_shared_gcn - 1)])
+            
+            def forward(self, x, edge_index):
+                for l in self.ml:
+                    x = l(x, edge_index)
+                
+                return x
+
+        model1 = M1()
         model2 = GCNConvFC(dim_hidden, num_classes)
         
-        model = WiFaCCT[nn.ModuleList[GCNConv], GCNConvFC](model1, model2, num_aux_branches=8)
+        model = WiFaCCT[nn.ModuleList, GCNConvFC](model1, model2, num_aux_branches=8)
         return model
     
     def _get_edges(self, num_frames: int):

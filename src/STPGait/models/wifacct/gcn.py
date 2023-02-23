@@ -1,4 +1,4 @@
-from dig.xgraph.models import GCNConv, GlobalMeanPool
+from dig.xgraph.models import GCNConv as GCN, GlobalMeanPool
 from torch import nn, Tensor
 from torch_geometric.data import Batch, Data
 
@@ -6,13 +6,14 @@ class GCNConv(nn.Module):
     def __init__(self, d1: int, d2: int):
         super().__init__()
 
-        self.conv = GCNConv(d1, d2)
+        self.conv = GCN(d1, d2)
         self.bn_relu = nn.Sequential(
             nn.BatchNorm1d(d2),
             nn.ReLU()
         )
 
     def forward(self, x: Tensor, edge_index: Tensor):
+        input(x.size())
         B, T, V, _ = x.size()
         x = x.reshape(B, T*V, -1) # B, T*V, C
         data = Batch.from_data_list([Data(x=x_, edge_index=edge_index) for x_ in x])
