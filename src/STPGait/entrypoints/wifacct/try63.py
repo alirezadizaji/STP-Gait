@@ -6,15 +6,15 @@ from torch import nn
 from torch.nn import functional as F
 from torch_geometric.data import Batch, Data
 
-from ....config import BaseConfig, TrainingConfig
-from ....context import Skeleton
-from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
-from ....data.read_gait_data import ProcessingGaitConfig
-from ....enums import Separation, Optim
-from ....models.wifacct import WiFaCCT
-from ....models.wifacct.gcn import GCNConv, GCNConvFC
-from ....preprocess.main import PreprocessingConfig
-from ...train import TrainEntrypoint
+from ...config import BaseConfig, TrainingConfig
+from ...context import Skeleton
+from ...dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
+from ...data.read_gait_data import ProcessingGaitConfig
+from ...enums import Separation, Optim
+from ...models.wifacct import WiFaCCT
+from ...models.wifacct.gcn import GCNConv, GCNConvFC
+from ...preprocess.main import PreprocessingConfig
+from ..train import TrainEntrypoint
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor]
