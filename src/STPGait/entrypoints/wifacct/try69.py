@@ -34,7 +34,7 @@ class Entrypoint(E):
             try_name="wifacct_msg3d",
             device="cuda:0",
             eval_batch_size=12,
-            save_log_in_file=True,
+            save_log_in_file=False,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50, batch_size=12)
         )
         TrainEntrypoint.__init__(self, kfold, config)
@@ -80,5 +80,8 @@ class Entrypoint(E):
         o_aux = o_aux.flatten(0, 1)
         loss_unsup = -torch.mean(o_aux[torch.arange(y1d.size(0)), y1d])
 
-        loss = loss_sup + 0.2 * loss_unsup
+        loss = 0.2 * loss_unsup
+        if not torch.isnan(loss_sup):
+            loss = loss + loss_sup
+
         return loss
