@@ -32,7 +32,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
             )
         config = BaseConfig(
             try_num=63,
-            try_name="gcn_cct",
+            try_name="wifacct_gcn",
             device="cuda:0",
             eval_batch_size=32,
             save_log_in_file=True,
@@ -64,7 +64,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         model1 = M1()
         model2 = GCNConvFC(dim_hidden, num_classes)
         
-        model = WiFaCCT[nn.ModuleList, GCNConvFC](model1, model2, num_aux_branches=8)
+        model = WiFaCCT[nn.ModuleList, GCNConvFC](model1, model2, num_aux_branches=5)
         return model
     
     def _get_edges(self, num_frames: int):

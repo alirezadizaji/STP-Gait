@@ -27,7 +27,7 @@ class Entrypoint(E):
             )
         config = BaseConfig(
             try_num=68,
-            try_name="gcn_cct_sup_part",
+            try_name="wifacct_gcn_sup_part",
             device="cuda:0",
             eval_batch_size=32,
             save_log_in_file=True,
