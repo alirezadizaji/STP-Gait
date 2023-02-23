@@ -13,7 +13,6 @@ class GCNConv(nn.Module):
         )
 
     def forward(self, x: Tensor, edge_index: Tensor):
-        input(x.size())
         B, T, V, _ = x.size()
         x = x.reshape(B, T*V, -1) # B, T*V, C
         data = Batch.from_data_list([Data(x=x_, edge_index=edge_index) for x_ in x])
