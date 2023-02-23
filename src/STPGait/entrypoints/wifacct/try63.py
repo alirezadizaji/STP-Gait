@@ -64,7 +64,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         model1 = M1()
         model2 = GCNConvFC(dim_hidden, num_classes)
         
-        model = WiFaCCT[nn.ModuleList, GCNConvFC](model1, model2, num_aux_branches=8)
+        model = WiFaCCT[nn.ModuleList, GCNConvFC](model1, model2, num_aux_branches=5)
         return model
     
     def _get_edges(self, num_frames: int):
