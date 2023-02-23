@@ -53,12 +53,12 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
             num_class=num_classes,
             num_point=25,
             num_person=1,
-            num_gcn_scales=7,
-            num_g3d_scales=4)
+            num_gcn_scales=4,
+            num_g3d_scales=2)
         return model
         
     def _model_forwarding(self, data: IN) -> OUT:
-        x = data[0]     # B, T, V, C
+        x = data[0][..., [0, 1]]     # B, T, V, C
         x = x.permute(0, 3, 1, 2)[..., None] # B, C, T, V, M
         x = self.model(x)
         return x
