@@ -12,7 +12,7 @@ class Model1(nn.Module):
                  num_person,
                  num_gcn_scales,
                  num_g3d_scales,
-                 in_channels=3):
+                 in_channels=2):
         super(Model1, self).__init__()
 
         A_binary = AdjMatrixGraph().A_binary
@@ -24,9 +24,9 @@ class Model1(nn.Module):
         c2 = c1 * 2     # 192
 
         # r=3 STGC blocks
-        self.gcn3d1 = MultiWindow_MS_G3D(3, c1, A_binary, num_g3d_scales, window_stride=1)
+        self.gcn3d1 = MultiWindow_MS_G3D(in_channels, c1, A_binary, num_g3d_scales, window_stride=1)
         self.sgcn1 = nn.Sequential(
-            MS_GCN(num_gcn_scales, 3, c1, A_binary, disentangled_agg=True),
+            MS_GCN(num_gcn_scales, in_channels, c1, A_binary, disentangled_agg=True),
             MS_TCN(c1, c1),
             MS_TCN(c1, c1))
         self.sgcn1[-1].act = nn.Identity()
@@ -41,6 +41,7 @@ class Model1(nn.Module):
         self.tcn2 = MS_TCN(c2, c2)
 
     def forward(self, x):
+        x = x.permute(0, 3, 1, 2)[..., None] # B, C, T, V, M
         N, C, T, V, M = x.size()
         x = x.permute(0, 4, 3, 1, 2).contiguous().view(N, M * V * C, T)
         x = self.data_bn(x)
@@ -52,21 +53,17 @@ class Model1(nn.Module):
 
         x = F.relu(self.sgcn2(x) + self.gcn3d2(x), inplace=True)
         x = self.tcn2(x)
+        x = x.permute(0, 2, 3, 1)
         return x
 
 class Model2(nn.Module):
     def __init__(self,
                  num_class,
-                 num_point,
-                 num_person,
                  num_gcn_scales,
-                 num_g3d_scales,
-                 in_channels=3):
+                 num_g3d_scales):
         super(Model2, self).__init__()
 
         A_binary = AdjMatrixGraph().A_binary
-
-        self.data_bn = nn.BatchNorm1d(num_person * in_channels * num_point)
 
         # channels
         c1 = 96
@@ -87,6 +84,7 @@ class Model2(nn.Module):
         )
 
     def forward(self, x):
+        x = x.permute(0, 3, 1, 2) # B, C, T, V
         N, *_, M = x.size()
 
         x = F.relu(self.sgcn3(x) + self.gcn3d3(x), inplace=True)

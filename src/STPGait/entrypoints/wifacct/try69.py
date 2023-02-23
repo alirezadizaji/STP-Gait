@@ -33,9 +33,9 @@ class Entrypoint(E):
             try_num=69,
             try_name="wifacct_msg3d",
             device="cuda:0",
-            eval_batch_size=32,
+            eval_batch_size=12,
             save_log_in_file=True,
-            training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
+            training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50, batch_size=12)
         )
         TrainEntrypoint.__init__(self, kfold, config)
 
@@ -56,17 +56,14 @@ class Entrypoint(E):
             num_g3d_scales=num_g3d_scales)
         model2 = Model2(
             num_class=num_classes,
-            num_point=num_point,
-            num_person=num_person,
             num_gcn_scales=num_gcn_scales,
             num_g3d_scales=num_g3d_scales)
         
-        model = WiFaCCT[Model1, Model2](model1, model2, num_aux_branches=8)
+        model = WiFaCCT[Model1, Model2](model1, model2, num_frames=209, num_aux_branches=8)
         return model
 
     def _model_forwarding(self, data):
         x = data[0][..., [0, 1]].to(self.conf.device) # Use X-Y features
-        x = x.permute(0, 3, 1, 2)[..., None] # B, C, T, V, M
 
         out = self.model(x, m1_args=dict(), m2_args=dict())
         return out
