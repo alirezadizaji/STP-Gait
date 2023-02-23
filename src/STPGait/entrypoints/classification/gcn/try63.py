@@ -11,7 +11,8 @@ from ....context import Skeleton
 from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
 from ....data.read_gait_data import ProcessingGaitConfig
 from ....enums import Separation, Optim
-from ....models.gcn_cct import GCNCCT
+from ....models.wifacct import WiFaCCT
+from ....models.wifacct.gcn import GCNConv, GCNConvFC
 from ....preprocess.main import PreprocessingConfig
 from ...train import TrainEntrypoint
 
@@ -44,7 +45,17 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
     def get_model(self) -> nn.Module:
         num_classes = self.kfold._ulabels.size
-        model = GCNCCT(num_classes, num_shared_gcn=2, dim_node=2, dim_hidden=60, num_aux_cls=8)
+        num_shared_gcn=2
+        dim_node=2
+        dim_hidden=60
+
+        model1 = nn.ModuleList(
+            [GCNConv(dim_node, dim_hidden)] +
+            [GCNConv(dim_hidden, dim_hidden) for _ in range(num_shared_gcn - 1)]
+        )
+        model2 = GCNConvFC(dim_hidden, num_classes)
+        
+        model = WiFaCCT[nn.ModuleList[GCNConv], GCNConvFC](model1, model2, num_aux_branches=8)
         return model
     
     def _get_edges(self, num_frames: int):
@@ -56,7 +67,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         if self._edge_index is None:
             self._edge_index = self._get_edges(x.size(1)).to(x.device)
 
-        out: OUT = self.model(x, self._edge_index)
+        out: OUT = self.model(x, m1_args=dict(edge_index=self._edge_index), m2_args=dict(edge_index=self._edge_index))
         return out
 
     def _calc_loss(self, x: OUT, data: IN) -> torch.Tensor:

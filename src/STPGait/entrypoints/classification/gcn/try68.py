@@ -11,7 +11,6 @@ from ....context import Skeleton
 from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
 from ....data.read_gait_data import ProcessingGaitConfig
 from ....enums import Separation, Optim
-from ....models.gcn_cct import GCNCCT
 from ....preprocess.main import PreprocessingConfig
 from ...train import TrainEntrypoint
 from .try63 import Entrypoint as E
