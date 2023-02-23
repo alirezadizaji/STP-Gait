@@ -32,7 +32,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
             )
         config = BaseConfig(
             try_num=63,
-            try_name="gcn_cct",
+            try_name="wifacct_gcn",
             device="cuda:0",
             eval_batch_size=32,
             save_log_in_file=True,
