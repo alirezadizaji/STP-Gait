@@ -111,9 +111,9 @@ class Model(nn.Module):
         self.data_bn = nn.BatchNorm1d(num_person * in_channels * num_point)
 
         # channels
-        c1 = 96
-        c2 = c1 * 2     # 192
-        c3 = c2 * 2     # 384
+        c1 = 60
+        c2 = c1 
+        c3 = c2
 
         # r=3 STGC blocks
         self.gcn3d1 = MultiWindow_MS_G3D(in_channels, c1, A_binary, num_g3d_scales, window_stride=1)
