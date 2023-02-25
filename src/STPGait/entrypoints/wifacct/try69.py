@@ -59,7 +59,7 @@ class Entrypoint(E):
             num_gcn_scales=num_gcn_scales,
             num_g3d_scales=num_g3d_scales)
         
-        model = WiFaCCT[Model1, Model2](model1, model2, num_frames=209, num_aux_branches=5)
+        model = WiFaCCT[Model1, Model2](model1, model2, num_frames=209, num_aux_branches=3)
         return model
 
     def _model_forwarding(self, data):
