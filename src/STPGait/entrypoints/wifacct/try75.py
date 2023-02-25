@@ -33,17 +33,29 @@ class Entrypoint(E):
         )
         TrainEntrypoint.__init__(self, kfold, config)
 
+    @property
+    def frame_size(self):
+        return 400
+    
+    @property
+    def chunk_size(self):
+        return 10
+
     def get_model(self) -> nn.Module:
         num_classes = self.kfold._ulabels.size
 
-        model1 = Model1(d_model=60, nhead=8, n_enc_layers=2)
-        model2 = Model2(num_classes, d_model=60, nhead=8, n_enc_layers=1)
+        d = 80
+        model1 = Model1(d_model=d, nhead=8, n_enc_layers=2)
+        model2 = Model2(num_classes, d_model=d, nhead=8, n_enc_layers=1)
         
         model = WiFaCCT[Model1, Model2](model1, model2, num_aux_branches=3)
         return model
 
     def _model_forwarding(self, data):
-        x = data[0][..., [0, 1]].to(self.conf.device) # Use X-Y features
+        x = data[0]
+        x = x[:, :self.frame_size, :, [0, 1]]          # B, T, V, C
+        x = torch.stack(x.split(self.chunk_size, 1), dim=3) # B, T1, V, T2, C
+        x = x.flatten(3).to(self.conf.device)  # B, T1, V, D
 
         out = self.model(x, m1_args=dict(), m2_args=dict())
         return out
