@@ -1,24 +1,18 @@
-from typing import List, Tuple
-
-import numpy as np
 import torch
 from torch import nn
-from torch.nn import functional as F
-from torch_geometric.data import Batch, Data
 
 from ...config import BaseConfig, TrainingConfig
-from ...context import Skeleton
 from ...dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
 from ...data.read_gait_data import ProcessingGaitConfig
-from ...enums import Separation, Optim
+from ...enums import Optim
 from ...models.wifacct import WiFaCCT
-from ...models.wifacct.ms_g3d import Model1, Model2
+from ...models.wifacct.vivit import Model1, Model2
 from ...preprocess.main import PreprocessingConfig
 from ..train import TrainEntrypoint
 from .try63 import Entrypoint as E
 
 
-# try 69
+# try 75
 class Entrypoint(E):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(
@@ -30,8 +24,8 @@ class Entrypoint(E):
                 proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)))
             )
         config = BaseConfig(
-            try_num=69,
-            try_name="wifacct_msg3d",
+            try_num=75,
+            try_name="wifacct_vivit",
             device="cuda:0",
             eval_batch_size=32,
             save_log_in_file=True,
@@ -39,27 +33,13 @@ class Entrypoint(E):
         )
         TrainEntrypoint.__init__(self, kfold, config)
 
-        self._edge_index: torch.Tensor = None
-
     def get_model(self) -> nn.Module:
         num_classes = self.kfold._ulabels.size
 
-        num_point = 25
-        num_person=1
-        num_gcn_scales=4
-        num_g3d_scales=2
-
-        model1 = Model1(
-            num_point=num_point,
-            num_person=num_person,
-            num_gcn_scales=num_gcn_scales,
-            num_g3d_scales=num_g3d_scales)
-        model2 = Model2(
-            num_class=num_classes,
-            num_gcn_scales=num_gcn_scales,
-            num_g3d_scales=num_g3d_scales)
+        model1 = Model1(d_model=60, nhead=8, n_enc_layers=2)
+        model2 = Model2(num_classes, d_model=60, nhead=8, n_enc_layers=1)
         
-        model = WiFaCCT[Model1, Model2](model1, model2, num_frames=209, num_aux_branches=3)
+        model = WiFaCCT[Model1, Model2](model1, model2, num_aux_branches=3)
         return model
 
     def _model_forwarding(self, data):
