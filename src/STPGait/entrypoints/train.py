@@ -154,10 +154,8 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
 
             criteria = self._eval_epoch_end(separation)
             assert criteria.size == len(self.criteria_names), "Mismatch between criteria values length and number of existing names."
-            if separation == Separation.VAL:
-                self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch] = criteria
-            else:
-                return criteria
+            
+            return criteria
 
     def _early_stopping(self, best_epoch: Optional[int], thd: int = 50) -> bool:
         best = best_epoch if best_epoch is not None else 0
@@ -197,8 +195,11 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
         num_epochs = self.conf.training_config.num_epochs
         best_epoch = None
         for self.epoch in tqdm(range(num_epochs)):
+            
             self._train_for_one_epoch()
-            self._validate_for_one_epoch(Separation.VAL, self.val_loader)
+            
+            criteria = self._validate_for_one_epoch(Separation.VAL, self.val_loader)
+            self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch] = criteria
             val = self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch, self.best_epoch_criterion_idx]
             
             # save only best epoch in terms of validation accuracy             
@@ -222,11 +223,14 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
         # evaluate best epoch on test set
         self.epoch = best_epoch
         self.model.load_state_dict(torch.load(self._get_weight_save_path(self.epoch), map_location=self.conf.device))
+        
         criteria = self._validate_for_one_epoch(Separation.TEST, self.test_loader)
         test = criteria[self.best_epoch_criterion_idx]
-        self.fold_test_criterion[self.kfold.testK] = test
+        self.fold_test_criterion[:, self.kfold.testK] = criteria
+        
         val = self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch, self.best_epoch_criterion_idx]
-        print(f"@@@@@ Best criteria ValK {self.kfold.valK} epoch {best_epoch} @@@@@\nval: {val}, test: {test}", flush=True)
+        
+        print(f"@@@@@ Best criteria ValK {self.kfold.valK} epoch {self.epoch} @@@@@\n---> criterion: {self.criteria_names}, val: {val}, test: {test} <----", flush=True)
 
 
     def _main_phase_eval(self):
@@ -236,15 +240,20 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
         
         self.epoch = int(files[0])
         self.model.load_state_dict(torch.load(self._get_weight_save_path(self.epoch), map_location=self.conf.device))
-        val = self._validate_for_one_epoch(Separation.VAL, self.val_loader)
-        test = self._validate_for_one_epoch(Separation.TEST, self.test_loader)
-        self.fold_test_criterion[self.kfold.testK] = test
         
-        print(f"@@@@@ Best criteria ValK {self.kfold.valK} epoch {self.epoch} @@@@@\nval: {val}, test: {test}", flush=True)
+        criteria = self._validate_for_one_epoch(Separation.VAL, self.val_loader)
+        self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch] = criteria
+        val = self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch, self.best_epoch_criterion_idx]
+        
+        criteria = self._validate_for_one_epoch(Separation.TEST, self.test_loader)
+        self.fold_test_criterion[:, self.kfold.testK] = criteria
+        test = criteria[self.best_epoch_criterion_idx]
+        
+        print(f"@@@@@ Best criteria ValK {self.kfold.valK} epoch {self.epoch} @@@@@\n---> criterion: {self.criteria_names}, val: {val}, test: {test} <----", flush=True)
 
 
     def run(self):
-        self.fold_test_criterion: Dict[int, float] = dict()
+        self.fold_test_criterion: np.ndarray = np.full((len(self.criteria_names), self.kfold.K), fill_value=-np.inf)
         print(f"@@@@@@@@@@@@ PHASE {self.conf.phase} IN PROGRESS... @@@@@@@@@@@@", flush=True)
         
         for _ in range(self.kfold.K):
@@ -259,4 +268,5 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
                 elif self.conf.phase == Phase.EVAL:
                     self._main_phase_eval()
 
-        print(f"@@@ Final Result on {self.kfold.K} KFold operation on test set: {np.mean(list(self.fold_test_criterion.values()))} @@@", flush=True)
+        cv = {c: np.mean(v) for c, v in zip(self.criteria_names, self.fold_test_criterion)}
+        print(f"@@@ Final Result on {self.kfold.K} KFold operation on test set: {cv} @@@", flush=True)

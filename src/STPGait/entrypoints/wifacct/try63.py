@@ -139,15 +139,15 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         tps, tns = mcm[:, 1, 1], mcm[:, 0, 0]
         fns, fps = mcm[:, 1, 0], mcm[:, 0, 1]
 
-        acc = np.mean((tps + tns) / (tps + tns + fns + fps))
-        spec = np.mean((tns) / (tns + fps))
-        sens = np.mean((tps) / (tps + fns))
+        acc = np.mean((tps + tns) / (tps + tns + fns + fps)) * 100
+        spec = np.mean((tns) / (tns + fps)) * 100
+        sens = np.mean((tps) / (tps + fns)) * 100
         
         y_pred_one_hot = np.zeros((num_samples, num_classes), dtype=np.int64)
         y_pred_one_hot[np.arange(num_samples), self.y_pred] = 1
 
-        f1 = f1_score(self.y_gt, self.y_pred, average='macro')
-        auc = roc_auc_score(self.y_gt, y_pred_one_hot, multi_class='ovr')
+        f1 = f1_score(self.y_gt, self.y_pred, average='macro') * 100
+        auc = roc_auc_score(self.y_gt, y_pred_one_hot, multi_class='ovr') * 100
         print(f'epoch{self.epoch} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f}', flush=True)
 
         return np.array([loss, acc, f1, sens, spec, auc])
@@ -161,14 +161,14 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         tps, tns = mcm[:, 1, 1], mcm[:, 0, 0]
         fns, fps = mcm[:, 1, 0], mcm[:, 0, 1]
 
-        acc = np.mean((tps + tns) / (tps + tns + fns + fps))
-        spec = np.mean((tns) / (tns + fps))
-        sens = np.mean((tps) / (tps + fns))
+        acc = np.mean((tps + tns) / (tps + tns + fns + fps)) * 100
+        spec = np.mean((tns) / (tns + fps)) * 100
+        sens = np.mean((tps) / (tps + fns)) * 100
         y_pred_one_hot = np.zeros((num_samples, num_classes), dtype=np.int64)
         y_pred_one_hot[np.arange(num_samples), self.y_pred] = 1
 
-        f1 = f1_score(self.y_gt, self.y_pred, average='macro')
-        auc = roc_auc_score(self.y_gt, y_pred_one_hot, multi_class='ovr')
+        f1 = f1_score(self.y_gt, self.y_pred, average='macro') * 100
+        auc = roc_auc_score(self.y_gt, y_pred_one_hot, multi_class='ovr') * 100
         print(f'epoch{self.epoch} separation {datasep} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f}', flush=True)
 
         return np.array([loss, acc, f1, sens, spec, auc])
