@@ -1,7 +1,7 @@
 from typing import List, Tuple
 
 import numpy as np
-from sklearn.metrics import multilabel_confusion_matrix, f1_score, roc_auc_score
+from sklearn.metrics import multilabel_confusion_matrix, f1_score, roc_auc_score, accuracy_score
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -139,7 +139,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         tps, tns = mcm[:, 1, 1], mcm[:, 0, 0]
         fns, fps = mcm[:, 1, 0], mcm[:, 0, 1]
 
-        acc = np.mean((tps + tns) / (tps + tns + fns + fps)) * 100
+        acc = accuracy_score(self.y_gt, self.y_pred) * 100
         spec = np.mean((tns) / (tns + fps)) * 100
         sens = np.mean((tps) / (tps + fns)) * 100
         
@@ -161,7 +161,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         tps, tns = mcm[:, 1, 1], mcm[:, 0, 0]
         fns, fps = mcm[:, 1, 0], mcm[:, 0, 1]
 
-        acc = np.mean((tps + tns) / (tps + tns + fns + fps)) * 100
+        acc = accuracy_score(self.y_gt, self.y_pred) * 100
         spec = np.mean((tns) / (tns + fps)) * 100
         sens = np.mean((tps) / (tps + fns)) * 100
         y_pred_one_hot = np.zeros((num_samples, num_classes), dtype=np.int64)
