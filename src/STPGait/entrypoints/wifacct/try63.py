@@ -35,8 +35,9 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
             try_num=63,
             try_name="wifacct_gcn",
             device="cuda:0",
+            phase="EVAL",
             eval_batch_size=32,
-            save_log_in_file=True,
+            save_log_in_file=False,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
         TrainEntrypoint.__init__(self, kfold, config)
@@ -130,6 +131,8 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         self.y_gt += y[labeled].tolist()
 
     def _train_epoch_end(self) -> np.ndarray:
+        num_classes = self.kfold._ulabels.size
+        num_samples = len(self.y_pred)
         loss = np.mean(self.losses)
         
         mcm = multilabel_confusion_matrix(self.y_gt, self.y_pred)
@@ -139,13 +142,19 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         acc = np.mean((tps + tns) / (tps + tns + fns + fps))
         spec = np.mean((tns) / (tns + fps))
         sens = np.mean((tps) / (tps + fns))
+        
+        y_pred_one_hot = np.zeros((num_samples, num_classes), dtype=np.int64)
+        y_pred_one_hot[np.arange(num_samples), self.y_pred] = 1
+
         f1 = f1_score(self.y_gt, self.y_pred, average='macro')
-        auc = roc_auc_score(self.y_gt, self.y_pred, multi_class='ovr')
+        auc = roc_auc_score(self.y_gt, y_pred_one_hot, multi_class='ovr')
         print(f'epoch{self.epoch} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f}', flush=True)
 
         return np.array([loss, acc, f1, sens, spec, auc])
 
     def _eval_epoch_end(self, datasep: Separation) -> np.ndarray:
+        num_classes = self.kfold._ulabels.size
+        num_samples = len(self.y_pred)
         loss = np.mean(self.losses)
         
         mcm = multilabel_confusion_matrix(self.y_gt, self.y_pred)
@@ -155,8 +164,11 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         acc = np.mean((tps + tns) / (tps + tns + fns + fps))
         spec = np.mean((tns) / (tns + fps))
         sens = np.mean((tps) / (tps + fns))
+        y_pred_one_hot = np.zeros((num_samples, num_classes), dtype=np.int64)
+        y_pred_one_hot[np.arange(num_samples), self.y_pred] = 1
+
         f1 = f1_score(self.y_gt, self.y_pred, average='macro')
-        auc = roc_auc_score(self.y_gt, self.y_pred, multi_class='ovr')
+        auc = roc_auc_score(self.y_gt, y_pred_one_hot, multi_class='ovr')
         print(f'epoch{self.epoch} separation {datasep} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f}', flush=True)
 
         return np.array([loss, acc, f1, sens, spec, auc])

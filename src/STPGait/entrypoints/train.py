@@ -235,6 +235,7 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
             print(f"@@@ WARNING: {self.weight_save_dir} directory should have exactly one saved file; got {len(files)} instead.", flush=True)
         
         self.epoch = int(files[0])
+        self.model.load_state_dict(torch.load(self._get_weight_save_path(self.epoch), map_location=self.conf.device))
         val = self._validate_for_one_epoch(Separation.VAL, self.val_loader)
         test = self._validate_for_one_epoch(Separation.TEST, self.test_loader)
         self.fold_test_criterion[self.kfold.testK] = test
