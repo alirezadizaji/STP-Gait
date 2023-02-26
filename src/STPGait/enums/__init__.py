@@ -5,3 +5,4 @@ from .optim import Optim
 from .separation import Separation
 from .walk_direction import WalkDirection
 from .step import Step
+from .phase import Phase

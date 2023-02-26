@@ -3,7 +3,7 @@ import os
 from typing import List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..enums import Optim
+    from ..enums import Optim, Phase
 
 
 @dataclass
@@ -29,6 +29,9 @@ class BaseConfig:
     remove_labels: List[str] = field(default_factory=list)
     """ Labels to be removed """
 
+    phase: Phase = Phase.TRAIN
+    """ Phase to Run """
+    
     @property
     def save_dir(self):
         """ the root location in which log files, visualization outputs and model weights are saved """

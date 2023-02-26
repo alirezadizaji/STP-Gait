@@ -10,7 +10,7 @@ import torch
 
 from ..config import BaseConfig
 from .core import MainEntrypoint
-from ..enums import Separation
+from ..enums import Phase, Separation
 
 if TYPE_CHECKING:
     from torch.utils.data import DataLoader
@@ -18,8 +18,6 @@ if TYPE_CHECKING:
 T = TypeVar('T', bound=BaseConfig)
 IN, OUT = TypeVar('IN'), TypeVar('OUT')
 class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
-
-
     def __init__(self, kfold, conf: T) -> None:
         super().__init__(kfold, conf)
 
@@ -28,8 +26,12 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
         self._TRAIN_CRITERION_IDX = 0
         self._VAL_CRITERION_IDX = 1
 
+    @property
+    def weight_save_dir(self):
+        return os.path.join(self.conf.save_dir, "weights", f"{self.kfold.valK}-{self.kfold.testK}")
+    
     def _get_weight_save_path(self, epoch: int) -> str:
-        weight_save_path =  os.path.join(self.conf.save_dir, "weights", f"{self.kfold.valK}-{self.kfold.testK}", str(epoch))
+        weight_save_path =  os.path.join(self.weight_save_dir, str(epoch))
         os.makedirs(os.path.dirname(weight_save_path), exist_ok=True)
         return weight_save_path
 
@@ -191,7 +193,7 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
 
         fig.savefig(save_pth, dpi=600, bbox_inches='tight', format="png")
 
-    def _main(self):
+    def _main_phase_train(self):
         num_epochs = self.conf.training_config.num_epochs
         best_epoch = None
         for self.epoch in tqdm(range(num_epochs)):
@@ -227,15 +229,33 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
         print(f"@@@@@ Best criteria ValK {self.kfold.valK} epoch {best_epoch} @@@@@\nval: {val}, test: {test}", flush=True)
 
 
+    def _main_phase_eval(self):
+        files = os.listdir(self.weight_save_dir)
+        if len(files) != 1:
+            print(f"@@@ WARNING: {self.weight_save_dir} directory should have exactly one saved file; got {len(files)} instead.", flush=True)
+        
+        self.epoch = int(files[0])
+        val = self._validate_for_one_epoch(Separation.VAL, self.val_loader)
+        test = self._validate_for_one_epoch(Separation.TEST, self.test_loader)
+        self.fold_test_criterion[self.kfold.testK] = test
+        
+        print(f"@@@@@ Best criteria ValK {self.kfold.valK} epoch {self.epoch} @@@@@\nval: {val}, test: {test}", flush=True)
+
+
     def run(self):
         self.fold_test_criterion: Dict[int, float] = dict()
-
+        print(f"@@@@@@@@@@@@ PHASE {self.conf.phase} IN PROGRESS... @@@@@@@@@@@@", flush=True)
+        
         for _ in range(self.kfold.K):
             with self.kfold:
                 self.model = self.get_model()
                 self.model.to(self.conf.device)
                 self.set_loaders()
                 self.set_optimizer(self.conf.training_config.optim_type)
-                self._main()
         
+                if self.conf.phase == Phase.TRAIN:
+                    self._main_phase_train()
+                elif self.conf.phase == Phase.EVAL:
+                    self._main_phase_eval()
+
         print(f"@@@ Final Result on {self.kfold.K} KFold operation on test set: {np.mean(list(self.fold_test_criterion.values()))} @@@", flush=True)

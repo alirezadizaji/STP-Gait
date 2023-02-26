@@ -1,6 +1,7 @@
 from typing import List, Tuple
 
 import numpy as np
+from sklearn.metrics import multilabel_confusion_matrix, f1_score, roc_auc_score
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -97,7 +98,8 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         return loss
 
     def _train_start(self) -> None:
-        self.correct = self.total = 0
+        self.y_pred = list()
+        self.y_gt = list()
         self.losses = list()
 
     def _eval_start(self) -> None:
@@ -109,8 +111,9 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         _, y, _, labeled = data
         x_probs = x[0][labeled]
         y_pred = x_probs.argmax(-1)
-        self.correct += torch.sum(y_pred == y[labeled]).item()
-        self.total += y[labeled].numel()
+
+        self.y_pred += y_pred.tolist()
+        self.y_gt += y[labeled].tolist()
 
         if iter_num % 20 == 0:
             print(f'epoch {self.epoch} iter {iter_num} loss value {np.mean(self.losses)}', flush=True)
@@ -122,21 +125,41 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         _, y, _, labeled = data
         x_probs = x[0][labeled]
         y_pred = x_probs.argmax(-1)
-        self.correct += torch.sum(y_pred == y[labeled]).item()
-        self.total += y[labeled].numel()
+        
+        self.y_pred += y_pred.tolist()
+        self.y_gt += y[labeled].tolist()
 
     def _train_epoch_end(self) -> np.ndarray:
         loss = np.mean(self.losses)
-        acc = self.correct / (self.total + 1e-4)
-        print(f'epoch{self.epoch} loss value {loss} acc {acc}', flush=True)
+        
+        mcm = multilabel_confusion_matrix(self.y_gt, self.y_pred)
+        tps, tns = mcm[:, 1, 1], mcm[:, 0, 0]
+        fns, fps = mcm[:, 1, 0], mcm[:, 0, 1]
 
-        return np.array([loss, acc])
+        acc = np.mean((tps + tns) / (tps + tns + fns + fps))
+        spec = np.mean((tns) / (tns + fps))
+        sens = np.mean((tps) / (tps + fns))
+        f1 = f1_score(self.y_gt, self.y_pred, average='macro')
+        auc = roc_auc_score(self.y_gt, self.y_pred, multi_class='ovr')
+        print(f'epoch{self.epoch} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f}', flush=True)
+
+        return np.array([loss, acc, f1, sens, spec, auc])
 
     def _eval_epoch_end(self, datasep: Separation) -> np.ndarray:
-        acc = self.correct / (self.total + 1e-4)
         loss = np.mean(self.losses)
-        print(f'epoch {self.epoch} separation {datasep} loss value {loss} acc {acc}', flush=True)
-        return np.array([loss, acc])
+        
+        mcm = multilabel_confusion_matrix(self.y_gt, self.y_pred)
+        tps, tns = mcm[:, 1, 1], mcm[:, 0, 0]
+        fns, fps = mcm[:, 1, 0], mcm[:, 0, 1]
+
+        acc = np.mean((tps + tns) / (tps + tns + fns + fps))
+        spec = np.mean((tns) / (tns + fps))
+        sens = np.mean((tps) / (tps + fns))
+        f1 = f1_score(self.y_gt, self.y_pred, average='macro')
+        auc = roc_auc_score(self.y_gt, self.y_pred, multi_class='ovr')
+        print(f'epoch{self.epoch} separation {datasep} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f}', flush=True)
+
+        return np.array([loss, acc, f1, sens, spec, auc])
 
     def best_epoch_criteria(self, best_epoch: int) -> bool:
         val = self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch, self.best_epoch_criterion_idx]
@@ -145,7 +168,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
     @property
     def criteria_names(self) -> List[str]:
-        return super().criteria_names + ['ACC']
+        return super().criteria_names + ['ACC', 'F1', 'Sens', 'Spec', 'AUC']
 
     @property
     def best_epoch_criterion_idx(self) -> int:
