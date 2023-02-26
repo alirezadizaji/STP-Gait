@@ -2,8 +2,9 @@ from dataclasses import dataclass, field
 import os
 from typing import List, Optional, TYPE_CHECKING
 
+from ..enums import Phase
 if TYPE_CHECKING:
-    from ..enums import Optim, Phase
+    from ..enums import Optim
 
 
 @dataclass
