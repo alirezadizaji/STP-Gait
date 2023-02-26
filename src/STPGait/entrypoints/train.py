@@ -268,5 +268,5 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
                 elif self.conf.phase == Phase.EVAL:
                     self._main_phase_eval()
 
-        cv = {c: np.mean(v) for c, v in zip(self.criteria_names, self.fold_test_criterion)}
+        cv = {c: np.around(np.mean(v), decimals=2) for c, v in zip(self.criteria_names, self.fold_test_criterion)}
         print(f"@@@ Final Result on {self.kfold.K} KFold operation on test set: {cv} @@@", flush=True)
