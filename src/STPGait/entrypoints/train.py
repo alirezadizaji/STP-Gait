@@ -230,7 +230,7 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
         
         val = self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch, self.best_epoch_criterion_idx]
         
-        print(f"@@@@@ Best criteria ValK {self.kfold.valK} epoch {self.epoch} @@@@@\n---> criterion: {self.criteria_names[self.best_epoch_criterion_idx]}, val: {val}, test: {test} <----", flush=True)
+        print(f"@@@@@ Best criteria ValK {self.kfold.valK} epoch {self.epoch} @@@@@\n---> criterion: {self.criteria_names[self.best_epoch_criterion_idx]}, val: {val:.2f}, test: {test:.2f} <----", flush=True)
 
 
     def _main_phase_eval(self):
@@ -249,7 +249,7 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
         self.fold_test_criterion[:, self.kfold.testK] = criteria
         test = criteria[self.best_epoch_criterion_idx]
         
-        print(f"@@@@@ Best criteria ValK {self.kfold.valK} epoch {self.epoch} @@@@@\n---> criterion: {self.criteria_names[self.best_epoch_criterion_idx]}, val: {val}, test: {test} <----", flush=True)
+        print(f"@@@@@ Best criteria ValK {self.kfold.valK} epoch {self.epoch} @@@@@\n---> criterion: {self.criteria_names[self.best_epoch_criterion_idx]}, val: {val:.2f}, test: {test:.2f} <----", flush=True)
 
 
     def run(self):
