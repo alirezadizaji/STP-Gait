@@ -31,7 +31,7 @@ class SkeletonDataset(Dataset):
         
         self.names = names                                      # N
 
-        assert self.X.size(0) == self.names.size == self.Y.size(0) == self.frame_invalid.size(0), f"Mismatch number of samples between data ({X.size(0)}), names ({names.size}), labels ({Y.size(0)}), and frame invalidity ({self.frame_invalid.size(0)})."
+        assert self.X.size(0) == self.Y.size(0) == self.frame_invalid.size(0), f"Mismatch number of samples between data ({X.size(0)}), names ({names.size}), labels ({Y.size(0)}), and frame invalidity ({self.frame_invalid.size(0)})."
         
         self.V = self.X.size(2)
         

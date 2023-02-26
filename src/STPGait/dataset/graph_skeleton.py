@@ -17,7 +17,8 @@ class GraphSkeletonDataset(SkeletonDataset):
         super().__init__(X, names, Y, labeled, frame_invalid)
         
         if node_invalid is None:
-            node_invalid = np.zeros((self.X.size(0), self.X.size(1), self.X.size(2)), dtype=np.bool)
+            *non_node, _ = self.X.size()
+            node_invalid = np.zeros(non_node, dtype=np.bool)
 
         self._node_invalid = torch.from_numpy(node_invalid)
 
