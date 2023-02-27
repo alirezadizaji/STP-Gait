@@ -19,27 +19,30 @@ def proc_gait_data_v2(load_dir: str, save_dir: str, filename: str="processed.pkl
         config: ProcessingGaitConfig = ProcessingGaitConfig()) -> None:
 
     proc_gait_data(load_dir, save_dir, filename, config)
-    
-    with open(os.path.join(save_dir, filename), 'wb') as f:
+
+    with open(os.path.join(save_dir, filename), 'rb') as f:
         data, labels, names, hard_cases_id = pickle.load(f)
-    
+
+    os.remove(os.path.join(save_dir, filename))
     with open(load_dir, "rb") as f:
         df = pd.read_pickle(f)
     
     condition = df['condition'].values
-    id = df['id'].values
-    idu, id_uv = np.unique(id, return_index=True)
-    condu, cond_uv = np.unique(condition, return_index=True)
+    sid = df['subjectID'].values
+    idu, id_uv = np.unique(sid, return_inverse=True)
+    condu, cond_uv = np.unique(condition, return_inverse=True)
     
     N = idu.size
     M = condu.size
-    
-    new_data = np.full((N, M, *data.shape[1:]), fill_value=-np.inf)        # N, M, T, V, C
-    new_labels = np.full(N, fill_value=-np.inf)                            # N
 
-    for x, y, id, cond in zip(data, labels, id_uv, cond_uv):
-        new_data[id, cond] = x
-        new_labels[id] = y
+    new_data = np.full((N, M, *data.shape[1:]), fill_value=-np.inf)        # N, M, T, V, C
+    new_labels = ["unlabeled" for _ in range(N)]                            # N
+
+    for x, y, sid, cond in zip(data, labels, id_uv, cond_uv):
+        new_data[sid, cond] = x
+        new_labels[sid] = y
+        
+    new_labels = np.array(new_labels)
     
     
     with open(os.path.join(save_dir, filename), 'wb') as f:
