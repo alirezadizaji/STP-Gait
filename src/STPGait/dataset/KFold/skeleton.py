@@ -38,6 +38,7 @@ class SkeletonKFoldOperator(KFoldOperator[TT], Generic[TT, C]):
         assert os.path.isfile(self.conf.load_dir), f"The given directory ({self.conf.load_dir}) should determine a file path (CSV); got directory instead."
         root_dir = os.path.dirname(self.conf.load_dir)
         save_dir = os.path.join(root_dir, self.conf.savename)
+        if not os.path.exists(save_dir):
             proc_gait_data(self.conf.load_dir, root_dir, self.conf.savename, self.conf.proc_conf)
         
         with open(save_dir, "rb") as f:
