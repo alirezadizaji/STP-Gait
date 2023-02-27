@@ -1,28 +1,19 @@
-from dataclasses import dataclass
 import os
 from typing import Dict, Generic, TypeVar
 
 import numpy as np
 import pandas as pd
 
-from .core import KFoldOperator, KFoldConfig
 from .skeleton import SkeletonKFoldOperator
 from ...data import proc_gait_data_v2
 from ..skeleton import SkeletonDataset
 from ...enums import Separation
 from ...context import Skeleton
-from ...preprocess.pad_empty_frames import pad_empty_frames
-from ...data.read_gait_data import ProcessingGaitConfig
+from .skeleton import SkeletonKFoldConfig
 
-@dataclass
-class SkeletonKFoldConfig:
-    kfold_config: KFoldConfig
-    load_dir: str
-    savename: str = "processed.pkl"
-    proc_conf: ProcessingGaitConfig = ProcessingGaitConfig()
-    filterout_hardcases: bool = False
-
-class SkeletonCondKFoldOperator(SkeletonKFoldOperator):
+TT = TypeVar('TT', bound=SkeletonDataset)
+C = TypeVar('C', bound=SkeletonKFoldConfig)
+class SkeletonCondKFoldOperator(SkeletonKFoldOperator[TT, C], Generic[TT, C]):
     r""" KFold for Skeleton Dataset condition
 
     Args:
