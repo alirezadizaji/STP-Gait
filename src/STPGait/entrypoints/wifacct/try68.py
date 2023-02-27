@@ -13,7 +13,7 @@ from .try63 import Entrypoint as E
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor]
 
-# try 68
+# try 68 (63 ->)
 ## Remove unsupervised-branch totally; use only supervised branch.
 class Entrypoint(E):
     def __init__(self) -> None:

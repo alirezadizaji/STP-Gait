@@ -21,6 +21,7 @@ IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor]
 
 # try 63
+## Semi-supervised training using GCN-3l
 class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(
