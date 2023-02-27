@@ -36,14 +36,18 @@ def proc_gait_data_v2(load_dir: str, save_dir: str, filename: str="processed.pkl
     M = condu.size
 
     new_data = np.full((N, M, *data.shape[1:]), fill_value=-np.inf)        # N, M, T, V, C
-    new_labels = ["unlabeled" for _ in range(N)]                            # N
-
+    new_labels = ["unlabeled" for _ in range(N)]                           # N
+    new_hard_cases_id = []
     for x, y, sid, cond in zip(data, labels, id_uv, cond_uv):
         new_data[sid, cond] = x
         new_labels[sid] = y
-        
+    
+    for hid in hard_cases_id:
+        new_hard_cases_id.append([id_uv[hid], cond_uv[hid]])
+
+    new_hard_cases_id = np.array(new_hard_cases_id)
     new_labels = np.array(new_labels)
     
     
     with open(os.path.join(save_dir, filename), 'wb') as f:
-        pickle.dump((new_data, new_labels, names, np.array(hard_cases_id)), f)
+        pickle.dump((new_data, new_labels, names, new_hard_cases_id), f)

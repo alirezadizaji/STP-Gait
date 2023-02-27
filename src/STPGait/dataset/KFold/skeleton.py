@@ -69,7 +69,6 @@ class SkeletonKFoldOperator(KFoldOperator[TT], Generic[TT, C]):
         self._x = x[indices]
         self._labels = labels[indices]
         self._names = names[indices]
-        self._hard_cases_id = hard_cases_id
         self._node_invalidity = self._get_node_invalidity()         # ..., V
         self._frame_invalidity = self._node_invalidity.sum(-1) > 0
 

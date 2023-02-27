@@ -15,7 +15,7 @@ from ...models.wifacct.gcn import GCNConv
 from ...preprocess.main import PreprocessingConfig
 from ..train import TrainEntrypoint
 
-IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
+IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = torch.Tensor
 
 # try 81
@@ -60,14 +60,15 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         x = data[0][..., [0, 1]].to(self.conf.device) # N, M, T, V, C
         if self._edge_index is None:
             self._edge_index = self._get_edges(x.size(1)).to(x.device)
-                
+        
+        cond_mask = data[4].permute(1, 0).to(self.conf.device)
         x = x.permute(1, 0, 2, 3, 4)
         inps = list()
         for x_ in x:
             inps.append((x_, self._edge_index))
 
 
-        out: OUT = self.model(inps)
+        out: OUT = self.model(cond_mask, inps)
         return out
 
     def _calc_loss(self, x: OUT, data: IN) -> torch.Tensor:

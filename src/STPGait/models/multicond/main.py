@@ -30,12 +30,15 @@ class MultiCond(nn.Module, Generic[T]):
         self.fc = nn.Sequential(*modules)
         super().__init__()
     
-    def forward(self, inps: List[Tuple[torch.Tensor, ...]]) -> Tensor:
+    def forward(self, cond_mask: Tensor, inps: List[Tuple[torch.Tensor, ...]]) -> Tensor:
         out = []
         for inp, m in zip(inps, self.base):
             out.append(m(*inp))
         
-        x = torch.stack(out, dim=0).sum(0)
+        x = torch.stack(out, dim=0)
+        x_interface = torch.zeros_like(x, requires_grad=False)
+        x_interface[cond_mask] = x_interface[cond_mask] + x[cond_mask]
+        x = x_interface.sum(0)
         x = self.avg_op(x)
         assert x.ndim == 2 and x.size(1) == self.start_dim, \
                 """ Number of X dimension must be two and the last one must be matched with first layer FC. """
