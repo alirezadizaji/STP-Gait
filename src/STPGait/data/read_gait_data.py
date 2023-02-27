@@ -34,10 +34,11 @@ def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl",
         df = pd.read_pickle(f)
     
     raw_data = df['keypoints'].values
-    gait_seq = df['gait_sequence'].values
+    if not config.fillZ_empty:
+        gait_seq = df['gait_sequence'].values
+        walk_directions = df['walk_direction'].values
     labels = df['class'].values
     names = df['video_name'].values
-    walk_directions = df['walk_direction'].values
     
     num_frames = [r.shape[0] for r in raw_data]
     mean, std = np.mean(num_frames), np.std(num_frames)
@@ -48,12 +49,12 @@ def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl",
     for idx, r in enumerate(raw_data):
         sample_num_frames = num_frames[idx]
         sample_feature = np.stack(np.split(r, num_nodes, axis=1), axis=1) # T, V, C - 1
-        sample_gait = gait_seq[idx]
 
         sample_z = np.zeros((sample_num_frames, num_nodes))
 
         # Fill Z values using manual analysis :/
         if not config.fillZ_empty:
+            sample_gait = gait_seq[idx]
             # Seems like the first two steps is when the patient enters to the process :), since it is always NaN
             step_time = np.array(list(sample_gait['STime'].values()))[2:]
             step_len = np.array(list(sample_gait["SLen"].values()))[2:]
@@ -119,8 +120,9 @@ def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl",
     data, hard_cases_id = preprocessing(data, config.preprocessing_conf)
 
     # Revert walk direction when going away from the camera
-    away_idxs = np.nonzero(walk_directions == WalkDirection.AWAY)[0]
-    data[away_idxs, ..., 2] = data[away_idxs, ..., 2] - data[away_idxs, ..., 2].min((1, 2), keepdims=True)
+    if not config.fillZ_empty:
+        away_idxs = np.nonzero(walk_directions == WalkDirection.AWAY)[0]
+        data[away_idxs, ..., 2] = data[away_idxs, ..., 2] - data[away_idxs, ..., 2].min((1, 2), keepdims=True)
     
     with open(os.path.join(save_dir, filename), 'wb') as f:
         pickle.dump((data, labels, names, np.array(hard_cases_id)), f)
