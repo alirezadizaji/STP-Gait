@@ -6,7 +6,7 @@ from ....dataset.KFold import GraphSkeletonCondKFoldOperator, SkeletonCondKFoldC
 from ....data.read_gait_data import ProcessingGaitConfig
 from ....enums import Condition, Optim
 from ....preprocess.main import PreprocessingConfig
-from .try14 import Entrypoint as E
+from .try82 import Entrypoint as E
 from ...train import TrainEntrypoint
 
 # try 83 (try 82 ->)
@@ -33,9 +33,6 @@ class Entrypoint(E):
         TrainEntrypoint.__init__(self, kfold, config)
 
         self._edge_index: torch.Tensor = None
-
-    def _get_edges(self, num_frames: int):
-        return torch.from_numpy(Skeleton.get_vanilla_edges(num_frames)[0])
 
     def data_preprocessing(self, data):
         data[0] = data[0].squeeze(1)

@@ -33,11 +33,3 @@ class Entrypoint(E):
         TrainEntrypoint.__init__(self, kfold, config)
 
         self._edge_index: torch.Tensor = None
-
-    def _get_edges(self, num_frames: int):
-        return torch.from_numpy(Skeleton.get_vanilla_edges(num_frames)[0])
-
-    def data_preprocessing(self, data):
-        data[0] = data[0].squeeze(1)
-        assert data[0].ndim == 4
-        return data
