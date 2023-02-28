@@ -44,13 +44,23 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
     def get_model(self) -> nn.Module:
         num_classes = self.kfold._ulabels.size
-        gcn3l = nn.ModuleList([
-            GCNConv(2, 60),
-            GCNConv(60, 60),
-            GCNConv(60, 60)
-        ])
+        class _Module(nn.Module):
+            def __init__(self):
+                super().__init__()
+            
+                self.gcn3l = nn.ModuleList([
+                    GCNConv(2, 60),
+                    GCNConv(60, 60),
+                    GCNConv(60, 60)])
+            
+            def forward(self, x, edge_index):
+                for m in self.gcn3l:
+                    x = m(x, edge_index)
+                
+                return x
         
-        model = MultiCond[nn.ModuleList](gcn3l, fc_hidden_num=[60, 60], avg_op=lambda x: x.mean((1, 2)), num_classes=num_classes)
+        gcn3l = _Module()
+        model = MultiCond[_Module](gcn3l, fc_hidden_num=[60, 60], avg_op=lambda x: x.mean((1, 2)), num_classes=num_classes)
         return model
     
     def _get_edges(self, num_frames: int):
