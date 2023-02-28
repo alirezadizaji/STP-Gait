@@ -15,6 +15,8 @@ from ..context import Skeleton
 class ProcessingGaitConfig:
     fillZ_empty: bool = True
     preprocessing_conf: PreprocessingConfig = PreprocessingConfig(critical_limit=30)
+    num_unlabeled: int = None
+    num_per_class: int = None
 
 @timer
 def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl", 
@@ -32,6 +34,14 @@ def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl",
 
     with open(load_dir, "rb") as f:
         df = pd.read_pickle(f)
+    
+    labeled = df[df["class"] != "unlabeled"]
+    unlabeled = df[df["class"] == "unlabeled"]
+    if config.num_unlabeled != None:
+        unlabeled = unlabeled.sample(n = config.num_unlabeled)
+    if config.num_per_class != None:
+        labeled = labeled.groupby('class').sample(n = config.num_per_class)
+    df = pd.concat([unlabeled, labeled])
     
     raw_data = df['keypoints'].values
     if not config.fillZ_empty:
