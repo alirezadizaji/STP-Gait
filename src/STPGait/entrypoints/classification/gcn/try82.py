@@ -2,7 +2,7 @@ import torch
 
 from ....config import BaseConfig, TrainingConfig
 from ....context import Skeleton
-from ....dataset.KFold import GraphSkeletonCondKFoldOperator, SkeletonKFoldConfig, KFoldConfig
+from ....dataset.KFold import GraphSkeletonCondKFoldOperator, SkeletonCondKFoldConfig, KFoldConfig
 from ....data.read_gait_data import ProcessingGaitConfig
 from ....enums import Optim
 from ....preprocess.main import PreprocessingConfig
@@ -15,7 +15,7 @@ from ...train import TrainEntrypoint
 class Entrypoint(E):
     def __init__(self) -> None:
         kfold = GraphSkeletonCondKFoldOperator(
-            config=SkeletonKFoldConfig(
+            config=SkeletonCondKFoldConfig(
                 kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0, filterout_unlabeled=True),
                 load_dir="../../Data/cond12class.pkl",
                 filterout_hardcases=True,
