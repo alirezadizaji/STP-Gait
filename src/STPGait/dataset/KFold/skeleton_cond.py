@@ -62,6 +62,7 @@ class SkeletonCondKFoldOperator(SkeletonKFoldOperator[TT, C], Generic[TT, C]):
         if self.conf.condition is not None:
             idx = condu.tolist().index(self.conf.condition)
             x = x[:, [idx]]
+            cond_mask = cond_mask[:, [idx]]
 
         values, counts = np.unique(labels, return_counts=True)
         v_to_c = {v: c for v, c in zip(values, counts)}
