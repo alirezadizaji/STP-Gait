@@ -7,7 +7,7 @@ from .skeleton_cond import SkeletonCondDataset
 
 class GraphSkeletonCondDataset(SkeletonCondDataset):
     def __init__(self, X: np.ndarray, names: np.ndarray, Y: np.ndarray, labeled: np.ndarray,
-            frame_invalid: Optional[np.ndarray], node_invalid: Optional[np.ndarray], cond_mask: np.ndarray) -> None:
+            frame_invalid: Optional[np.ndarray] = None, node_invalid: Optional[np.ndarray] = None, cond_mask: np.ndarray = None) -> None:
 
         super().__init__(X, names, Y, labeled, frame_invalid, cond_mask)
         

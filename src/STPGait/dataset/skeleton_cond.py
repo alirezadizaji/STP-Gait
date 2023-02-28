@@ -13,10 +13,12 @@ class SkeletonCondDataset(SkeletonDataset):
             names: np.ndarray,
             Y: np.ndarray,
             labeled: np.ndarray,
-            frame_invalid: Optional[np.ndarray],
-            cond_mask: np.ndarray) -> None:
+            frame_invalid: Optional[np.ndarray] = None,
+            cond_mask: np.ndarray = None) -> None:
 
         super().__init__(X, names, Y, labeled, frame_invalid)
+        if cond_mask is None:
+            cond_mask = np.ones((X.size(0), X.size(1)), dtype=np.bool)
         self.cond_mask = torch.from_numpy(cond_mask)
 
         assert self.X.size(0) == self.cond_mask.size(0) and self.X.size(1) == self.cond_mask.size(1)
