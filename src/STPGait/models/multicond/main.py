@@ -12,6 +12,7 @@ class AvgOp(Protocol):
 
 class MultiCond(nn.Module, Generic[T]):
     def __init__(self, basic_block: T, fc_hidden_num: List[int], num_classes: int, avg_op: AvgOp, copy_num: int = 3):
+        super().__init__()
         
         self.base: nn.ModuleList = nn.ModuleList([])
         for _ in range(copy_num):
@@ -28,7 +29,6 @@ class MultiCond(nn.Module, Generic[T]):
         modules.append(nn.Linear(fc_hidden_num[-1], num_classes))
         modules.append(nn.LogSoftmax(dim=-1))
         self.fc = nn.Sequential(*modules)
-        super().__init__()
     
     def forward(self, cond_mask: Tensor, inps: List[Tuple[torch.Tensor, ...]]) -> Tensor:
         out = []
