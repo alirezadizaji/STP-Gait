@@ -4,6 +4,7 @@ from typing import Dict, Generic, TypeVar
 import numpy as np
 import pandas as pd
 
+from .core import KFoldOperator
 from .skeleton import SkeletonKFoldOperator
 from ...data import proc_gait_data_v2
 from ..skeleton_cond import SkeletonCondDataset
@@ -68,7 +69,7 @@ class SkeletonCondKFoldOperator(SkeletonKFoldOperator[TT, C], Generic[TT, C]):
         self._node_invalidity = self._get_node_invalidity()         # ..., V
         self._frame_invalidity = self._node_invalidity.sum(-1) > 0
 
-        super().__init__(**self.conf.kfold_config.__dict__)
+        KFoldOperator.__init__(self, **self.conf.kfold_config.__dict__)
 
     def _get_node_invalidity(self) -> np.ndarray:
         """ It generates a mask, determining whether a node within a frame is missed or not. It verifies
@@ -78,46 +79,46 @@ class SkeletonCondKFoldOperator(SkeletonKFoldOperator[TT, C], Generic[TT, C]):
         Returns:
             np.ndarray: A mask, If an element is True, then that frame on that sequence has some missed information.
         """
-        N, T = self._x.shape[0], self._x.shape[1]
-        mask = np.zeros((N, T), dtype=np.bool)
+        N, M, T, *_ = self._x.shape
+        mask = np.zeros((N, M, T), dtype=np.bool)
 
         # First, mask frames having at least one NaN values
         nan_mask = np.isnan(self._x)
-        idx1, idx2, idx3, _ = np.nonzero(nan_mask)
-        mask[idx1, idx2] = True
+        idx1, idx2, idx3, idx4, _ = np.nonzero(nan_mask)
+        mask[idx1, idx2, idx3] = True
         ## Replace center location with NaN joints
-        self._x[idx1, idx2, idx3, :] = self._x[idx1, idx2, [Skeleton.CENTER], :] 
+        self._x[idx1, idx2, idx3, idx4, :] = self._x[idx1, idx2, idx3, [Skeleton.CENTER], :] 
         assert np.all(~np.isnan(self._x)), "There is still NaN values among locations."
 
         # Second, checkout non NaN frames if there are some inconsistency between shoulders, toes, or heads locations.
         node_invalidity = np.zeros_like(self._x[..., 0], dtype=np.bool)
         
         ## Critieria joints
-        center = self._x[:, :, [Skeleton.CENTER], :] # N, T, 1, C
-        lheap = self._x[:, :, [Skeleton.LEFT_HEAP], :] # N, T, 1, C
-        lknee = self._x[:, :, [Skeleton.LEFT_KNEE], :] # N, T, 1, C
+        center = self._x[..., [Skeleton.CENTER], :] # N, T, 1, C
+        lheap = self._x[..., [Skeleton.LEFT_HEAP], :] # N, T, 1, C
+        lknee = self._x[..., [Skeleton.LEFT_KNEE], :] # N, T, 1, C
 
         ## Upper body verification
         upper_indices = np.concatenate([Skeleton.SHOULDERS, Skeleton.HEAD_EYES_EARS])
-        y_upper = self._x[:, :, upper_indices, 1] # N, T, VV
+        y_upper = self._x[..., upper_indices, 1] # N, T, VV
         y_center = center[..., 1]
         y_lknee = lknee[..., 1]
         mask1 = ((y_upper - y_center) / (y_upper - y_lknee + 1e-3)) < 0.1
-        node_invalidity[:, :, upper_indices] = mask1
+        node_invalidity[..., upper_indices] = mask1
         
         ## Lower body verification
         lower_indices = Skeleton.WHOLE_FOOT
-        y_lower = self._x[:, :, lower_indices, 1] # N, T, VVV
+        y_lower = self._x[..., lower_indices, 1] # N, T, VVV
         mask2 = ((y_center - y_lower) / (y_center - y_lknee + 1e-3)) < 1
-        node_invalidity[:, :, lower_indices] = mask2
+        node_invalidity[..., lower_indices] = mask2
         
         ## Horizontal verification
         horizon_indices = Skeleton.ELBOWS_HANDS
-        x_horizon = np.abs(self._x[:, :, horizon_indices, 0]) # N, T, VVVV
+        x_horizon = np.abs(self._x[..., horizon_indices, 0]) # N, T, VVVV
         x_center = center[..., 0]
         x_lheap = lheap[..., 0]
         mask3 = ((x_horizon - x_center) / (x_lheap - x_center + 1e-3)) < 0.1 # N, T, VV
-        node_invalidity[:, :, horizon_indices] = mask3
+        node_invalidity[..., horizon_indices] = mask3
 
         return node_invalidity
         
