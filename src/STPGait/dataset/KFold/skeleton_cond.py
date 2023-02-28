@@ -35,10 +35,10 @@ class SkeletonCondKFoldOperator(SkeletonKFoldOperator[TT, C], Generic[TT, C]):
         
         with open(save_dir, "rb") as f:
             import pickle
-            x, labels, names, hard_cases_id = pickle.load(f)
+            x, labels, names, hard_cases_id, condu = pickle.load(f)
         
         print(f"### SkeletonKFoldOperator (raw data info): x shape {x.shape} ###", flush=True)
-
+        print(f"### Condition mapping: {condu} ###", flush=True)
         values, counts = np.unique(labels, return_counts=True)
         v_to_c = {v: c for v, c in zip(values, counts)}
         print(f"### Labels counts (before pruning): {v_to_c} ###", flush=True)

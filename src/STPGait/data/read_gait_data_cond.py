@@ -52,4 +52,4 @@ def proc_gait_data_v2(load_dir: str, save_dir: str, filename: str="processed.pkl
     new_names = np.array(new_names)
     
     with open(os.path.join(save_dir, filename), 'wb') as f:
-        pickle.dump((new_data, new_labels, new_names, new_hard_cases_id), f)
+        pickle.dump((new_data, new_labels, new_names, new_hard_cases_id, condu), f)
