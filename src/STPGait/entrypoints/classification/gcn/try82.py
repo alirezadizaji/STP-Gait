@@ -43,7 +43,7 @@ class Entrypoint(E):
         x = x.reshape(N*M, T, V, C)
         
         y = data[1]
-        y = y.repeat(1, M).flatten()
+        y = y.repeat_interleave(M)
         data[0] = x
         data[1] = y
 
