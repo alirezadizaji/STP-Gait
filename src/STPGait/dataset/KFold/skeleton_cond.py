@@ -47,8 +47,7 @@ class SkeletonCondKFoldOperator(SkeletonKFoldOperator[TT, C], Generic[TT, C]):
             cond_mask[hard_cases_id[:, 0], hard_cases_id[:, 1]] = False
 
             # Prune patients whose all condition movement is challenging
-            patient_mask = ~np.logical_and(cond_mask[:, [0]] == cond_mask, cond_mask[:, [0]] == False)
-            
+            patient_mask = ~(cond_mask.sum(1) == 0)
             x = x[patient_mask]
             labels = labels[patient_mask]
             names = names[patient_mask]
