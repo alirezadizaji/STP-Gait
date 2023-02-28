@@ -1,19 +1,23 @@
+from dataclasses import dataclass
 import os
-from typing import Dict, Generic, TypeVar
+from typing import Dict, Generic, Optional, TypeVar
 
 import numpy as np
-import pandas as pd
 
 from .core import KFoldOperator
 from .skeleton import SkeletonKFoldOperator
 from ...data import proc_gait_data_v2
 from ..skeleton_cond import SkeletonCondDataset
-from ...enums import Separation
+from ...enums import Condition, Separation
 from ...context import Skeleton
 from .skeleton import SkeletonKFoldConfig
 
+@dataclass
+class SkeletonCondKFoldConfig(SkeletonKFoldConfig):
+    condition: Optional[Condition] = None
+
 TT = TypeVar('TT', bound=SkeletonCondDataset)
-C = TypeVar('C', bound=SkeletonKFoldConfig)
+C = TypeVar('C', bound=SkeletonCondKFoldConfig)
 class SkeletonCondKFoldOperator(SkeletonKFoldOperator[TT, C], Generic[TT, C]):
     r""" KFold for Skeleton Dataset condition
 
@@ -36,9 +40,9 @@ class SkeletonCondKFoldOperator(SkeletonKFoldOperator[TT, C], Generic[TT, C]):
         with open(save_dir, "rb") as f:
             import pickle
             x, labels, names, hard_cases_id, condu = pickle.load(f)
-        
+
         print(f"### SkeletonKFoldOperator (raw data info): x shape {x.shape} ###", flush=True)
-        print(f"### Condition mapping: {condu} ###", flush=True)
+        print(f"### Condition mapping: {condu}, chosen condition: {self.conf.condition} ###", flush=True)
         values, counts = np.unique(labels, return_counts=True)
         v_to_c = {v: c for v, c in zip(values, counts)}
         print(f"### Labels counts (before pruning): {v_to_c} ###", flush=True)
@@ -54,6 +58,10 @@ class SkeletonCondKFoldOperator(SkeletonKFoldOperator[TT, C], Generic[TT, C]):
             names = names[patient_mask]
             cond_mask = cond_mask[patient_mask]
             print(f"### SkeletonKFoldOperator (Filtering hard cases): x shape {x.shape} ###", flush=True)
+
+        if self.conf.condition is not None:
+            idx = condu.tolist().index(self.conf.condition)
+            x = x[:, [idx]]
 
         values, counts = np.unique(labels, return_counts=True)
         v_to_c = {v: c for v, c in zip(values, counts)}

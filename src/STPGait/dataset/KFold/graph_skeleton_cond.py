@@ -2,11 +2,11 @@ from typing import Dict
 
 import numpy as np
 
-from .skeleton_cond import SkeletonKFoldConfig, SkeletonCondKFoldOperator
+from .skeleton_cond import SkeletonCondKFoldConfig, SkeletonCondKFoldOperator
 from ..graph_skeleton_cond import GraphSkeletonCondDataset
 from ...enums import Separation
 
-class GraphSkeletonCondKFoldOperator(SkeletonCondKFoldOperator[GraphSkeletonCondDataset, SkeletonKFoldConfig]):
+class GraphSkeletonCondKFoldOperator(SkeletonCondKFoldOperator[GraphSkeletonCondDataset, SkeletonCondKFoldConfig]):
     r""" KFold for Graph Skeleton Dataset """
 
     def set_sets(self, train_indices: np.ndarray, val_indices: np.ndarray, 

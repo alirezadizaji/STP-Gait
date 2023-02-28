@@ -99,9 +99,6 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
     def best_epoch_criteria(self, best_epoch: int) -> bool:
         """ Criteria that determines whether best epoch changes or not. """        
 
-    def data_preprocessing(self, data: IN) -> IN:
-        return data
-
     @property
     def criteria_names(self) -> List[str]:
         return ['Loss']

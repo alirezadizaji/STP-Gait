@@ -2,9 +2,9 @@ import torch
 
 from ....config import BaseConfig, TrainingConfig
 from ....context import Skeleton
-from ....dataset.KFold import GraphSkeletonCondKFoldOperator, SkeletonKFoldConfig, KFoldConfig
+from ....dataset.KFold import GraphSkeletonCondKFoldOperator, SkeletonCondKFoldConfig, KFoldConfig
 from ....data.read_gait_data import ProcessingGaitConfig
-from ....enums import Optim
+from ....enums import Condition, Optim
 from ....preprocess.main import PreprocessingConfig
 from .try82 import Entrypoint as E
 from ...train import TrainEntrypoint
@@ -14,12 +14,13 @@ from ...train import TrainEntrypoint
 class Entrypoint(E):
     def __init__(self) -> None:
         kfold = GraphSkeletonCondKFoldOperator(
-            config=SkeletonKFoldConfig(
+            config=SkeletonCondKFoldConfig(
                 kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0, filterout_unlabeled=True),
                 load_dir="../../Data/cond12class.pkl",
                 filterout_hardcases=True,
                 savename="processed12cls_120c.pkl",
-                proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)))
+                proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)),
+                condition=Condition.EC)
             )
         config = BaseConfig(
             try_num=84,
@@ -35,7 +36,3 @@ class Entrypoint(E):
 
     def _get_edges(self, num_frames: int):
         return torch.from_numpy(Skeleton.get_vanilla_edges(num_frames)[0])
-
-    def data_preprocessing(self, data):
-        data[0] = data[0][:, 1]
-        return data
