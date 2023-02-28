@@ -99,6 +99,9 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
     def best_epoch_criteria(self, best_epoch: int) -> bool:
         """ Criteria that determines whether best epoch changes or not. """        
 
+    def data_preprocessing(self, data: IN) -> IN:
+        return data
+
     @property
     def criteria_names(self) -> List[str]:
         return ['Loss']
@@ -122,7 +125,7 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
             for j in range(len(data)):
                 if isinstance(data[j], torch.Tensor):
                     data[j] = data[j].to(self.conf.device)
-
+            data = self.data_preprocessing(data)
             x: OUT = self._model_forwarding(data)
             loss = self._calc_loss(x, data)
 
@@ -146,7 +149,7 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
                 for i in range(len(data)):
                     if isinstance(data[i], torch.Tensor):
                         data[i] = data[i].to(self.conf.device)
-
+                data = self.data_preprocessing(data)
                 x = self._model_forwarding(data)
                 loss = self._calc_loss(x, data)
 
