@@ -19,6 +19,8 @@ IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = torch.Tensor
 
 # try 81
+## Three-branch condition based training, using three GCN-3l network
+## Mode: Take average of latent space
 ## Semi-supervised training using GCN-3l
 class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
     def __init__(self) -> None:
@@ -61,7 +63,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
                 return x
         
         gcn3l = _Module()
-        model = MultiCond[_Module](gcn3l, fc_hidden_num=[60, 60], avg_op=lambda x: x.mean((1, 2)), num_classes=num_classes)
+        model = MultiCond[_Module](gcn3l, fc_hidden_num=[60, 60], num_classes=num_classes)
         return model
     
     def _get_edges(self, num_frames: int):

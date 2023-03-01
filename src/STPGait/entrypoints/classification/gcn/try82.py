@@ -10,6 +10,7 @@ from .try14 import Entrypoint as E
 from ...train import TrainEntrypoint
 
 # try 82 (try 14 ->)
+## Concatenation on Input: each patient's condition as an input sample
 ## Applying non-temporal edges
 ## Use three-condition 12 classes dataset
 class Entrypoint(E):

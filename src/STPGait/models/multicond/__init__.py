@@ -1,1 +1,1 @@
-from .main import MultiCond
+from .main import MultiCond, AggMode
