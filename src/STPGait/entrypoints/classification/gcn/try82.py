@@ -20,7 +20,8 @@ class Entrypoint(E):
                 load_dir="../../Data/cond12class.pkl",
                 filterout_hardcases=True,
                 savename="processed12cls_120c.pkl",
-                proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)))
+                proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)),
+                min_num_valid_cond=3)
             )
         config = BaseConfig(
             try_num=82,
