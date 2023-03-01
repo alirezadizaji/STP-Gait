@@ -39,12 +39,10 @@ class MultiCond(nn.Module, Generic[T]):
             out.append(m(*inp).flatten(1))
         
         x = torch.stack(out, dim=1)                             # N, M, Z
+        assert torch.all(cond_mask), "All aggregation modes are currently available only for samples whose all conditions are valid."
         if self.agg_mode == AggMode.AVG:
-            x_interface = torch.zeros_like(x, requires_grad=False)
-            x_interface[cond_mask] = x_interface[cond_mask] + x[cond_mask]
-            x = x_interface.mean(2)
+            x = x.mean(1)
         elif self.agg_mode == AggMode.CAT:
-            assert torch.all(cond_mask), "Concatentation is currently available only for samples whose all conditions are valid."
             x = x.flatten(1)
         else:
             raise NotImplementedError("Attention mechanism has not implemented for this module yet.")
