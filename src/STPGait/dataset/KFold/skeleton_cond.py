@@ -15,6 +15,8 @@ from .skeleton import SkeletonKFoldConfig
 @dataclass
 class SkeletonCondKFoldConfig(SkeletonKFoldConfig):
     condition: Optional[Condition] = None
+    min_num_valid_cond: int = 1
+
 
 TT = TypeVar('TT', bound=SkeletonCondDataset)
 C = TypeVar('C', bound=SkeletonCondKFoldConfig)
@@ -52,7 +54,8 @@ class SkeletonCondKFoldOperator(SkeletonKFoldOperator[TT, C], Generic[TT, C]):
             cond_mask[hard_cases_id[:, 0], hard_cases_id[:, 1]] = False
 
             # Prune patients whose all condition movement is challenging
-            patient_mask = ~(cond_mask.sum(1) == 0)
+            assert self.conf.min_num_valid_cond >= 1 and self.conf.min_num_valid_cond <= x.shape[1]
+            patient_mask = cond_mask.sum(1) >= self.conf.min_num_valid_cond
             x = x[patient_mask]
             labels = labels[patient_mask]
             names = names[patient_mask]
