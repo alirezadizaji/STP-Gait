@@ -33,7 +33,7 @@ class Entrypoint(E):
                 proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)))
             )
         config = BaseConfig(
-            try_num=104,
+            try_num=105,
             try_name="cond3class_Vivit_sup_" + self.cond,
             device="cuda:0",
             eval_batch_size=32,

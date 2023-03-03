@@ -17,6 +17,7 @@ class ProcessingGaitConfig:
     preprocessing_conf: PreprocessingConfig = PreprocessingConfig(critical_limit=30)
     num_unlabeled: int = None
     num_per_class: int = None
+    supervised_percentage: float = None
     metaclass: bool = False
 @timer
 def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl", 
@@ -57,6 +58,17 @@ def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl",
                 new_labeled = pd.concat([new_labeled, df_l.sample(n = config.num_per_class)])
         labeled = new_labeled
     df = pd.concat([unlabeled, labeled])
+
+    # To be used only when all data are labeled
+    if config.supervised_percentage != None:
+        if not unlabeled.empty:
+            raise Exception("Dataset contains unlabeled data")
+        n_sample = int(config.supervised_percentage * df.shape[0]) 
+        labeled = df.sample(n = n_sample)
+        unlabeled = df.drop(labeled.index)
+        unlabeled[label_column] = 'unlabeled'
+        df = pd.concat([unlabeled, labeled])
+        df = df.sample(frac=1).reset_index(drop=True)
 
     raw_data = df['keypoints'].values
     if not config.fillZ_empty:
