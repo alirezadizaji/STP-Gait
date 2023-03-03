@@ -1,7 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import os
 import pickle
-
+from typing import List
 import numpy as np
 import pandas as pd
 
@@ -17,7 +17,7 @@ class ProcessingGaitConfig:
     preprocessing_conf: PreprocessingConfig = PreprocessingConfig(critical_limit=30)
     num_unlabeled: int = None
     num_per_class: int = None
-
+    metaclass: bool = False
 @timer
 def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl", 
         config: ProcessingGaitConfig = ProcessingGaitConfig()) -> None:
@@ -34,20 +34,36 @@ def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl",
 
     with open(load_dir, "rb") as f:
         df = pd.read_pickle(f)
+
+    if config.metaclass:
+        label_column = 'metaclass'
+    else:
+        label_column = 'class'
+
+    labeled = df[df[label_column] != "unlabeled"]
+    unlabeled = df[df[label_column] == "unlabeled"]
     
-    labeled = df[df["class"] != "unlabeled"]
-    unlabeled = df[df["class"] == "unlabeled"]
     if config.num_unlabeled != None:
         unlabeled = unlabeled.sample(n = config.num_unlabeled)
     if config.num_per_class != None:
-        labeled = labeled.groupby('class').sample(n = config.num_per_class)
+        new_labeled = pd.DataFrame(columns=list(labeled.columns))
+        label_ls = labeled[label_column].unique()
+        for l in label_ls:
+            df_l = labeled[labeled[label_column] == l]
+            num_rows = df_l.shape[0]
+            if config.num_per_class > num_rows:
+                new_labeled = pd.concat([new_labeled, df_l])
+            else:
+                new_labeled = pd.concat([new_labeled, df_l.sample(n = config.num_per_class)])
+        labeled = new_labeled
     df = pd.concat([unlabeled, labeled])
-    
+
     raw_data = df['keypoints'].values
     if not config.fillZ_empty:
         gait_seq = df['gait_sequence'].values
         walk_directions = df['walk_direction'].values
-    labels = df['class'].values
+    
+    labels = df[label_column].values
     names = df['video_name'].values
     
     num_frames = [r.shape[0] for r in raw_data]
