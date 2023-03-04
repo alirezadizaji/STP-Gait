@@ -259,7 +259,7 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
         self.fold_test_criterion: np.ndarray = np.full((len(self.criteria_names), self.kfold.K), fill_value=-np.inf)
         print(f"@@@@@@@@@@@@ PHASE {self.conf.phase} IN PROGRESS... @@@@@@@@@@@@", flush=True)
         
-        for _ in range(self.kfold.K):
+        for self.current_K in range(self.kfold.K):
             with self.kfold:
                 self.model = self.get_model()
                 self.model.to(self.conf.device)

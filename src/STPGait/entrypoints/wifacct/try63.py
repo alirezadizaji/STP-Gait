@@ -1,8 +1,11 @@
 from typing import List, Tuple
 
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from scipy.stats import chi2_contingency
-from sklearn.metrics import multilabel_confusion_matrix, f1_score, roc_auc_score, accuracy_score
+import seaborn as sns
+from sklearn.metrics import multilabel_confusion_matrix, f1_score, roc_auc_score, accuracy_score, precision_score, recall_score
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -105,6 +108,10 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         self.y_gt = list()
         self.losses = list()
 
+        if self.current_K == 0:
+            self.all_test_y_pred = list()
+            self.all_test_y_gt = list()
+
     def _eval_start(self) -> None:
         self._train_start()
 
@@ -117,6 +124,8 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
         self.y_pred += y_pred.tolist()
         self.y_gt += y[labeled].tolist()
+        self.all_test_y_gt += y[labeled].tolist()
+        self.all_test_y_pred += y_pred.tolist()
 
         if iter_num % 20 == 0:
             print(f'epoch {self.epoch} iter {iter_num} loss value {np.mean(self.losses)}', flush=True)
@@ -150,15 +159,16 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
         f1 = f1_score(self.y_gt, self.y_pred, average='macro') * 100
         auc = roc_auc_score(self.y_gt, y_pred_one_hot, multi_class='ovr') * 100
+        rec = recall_score(self.y_gt, self.y_pred, average='macro') * 100
+        pre = precision_score(self.y_gt, self.y_pred, average='macro') * 100
 
         observed = np.zeros((2, num_classes))
         np.add.at(observed[0], self.y_pred, 1)
         np.add.at(observed[1], self.y_gt, 1)
         _, p, *_ = chi2_contingency(observed)
 
-        print(f'epoch{self.epoch} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f} p-value {p:.3f}', flush=True)
-
-        return np.array([loss, acc, f1, sens, spec, auc, p])
+        print(f'epoch{self.epoch} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f} p-value {p:.3f} recall {rec:.2f} precision {pre:.2f}', flush=True)
+        return np.array([loss, acc, f1, sens, spec, auc, rec, pre, p])
 
     def _eval_epoch_end(self, datasep: Separation) -> np.ndarray:
         num_classes = self.kfold._ulabels.size
@@ -177,15 +187,29 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
         f1 = f1_score(self.y_gt, self.y_pred, average='macro') * 100
         auc = roc_auc_score(self.y_gt, y_pred_one_hot, multi_class='ovr') * 100
+        rec = recall_score(self.y_gt, self.y_pred, average='macro') * 100
+        pre = precision_score(self.y_gt, self.y_pred, average='macro') * 100
 
         observed = np.zeros((2, num_classes))
         np.add.at(observed[0], self.y_pred, 1)
         np.add.at(observed[1], self.y_gt, 1)
         _, p, *_ = chi2_contingency(observed)
 
-        print(f'epoch{self.epoch} separation {datasep} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f} p-value {p:.3f}.', flush=True)
+        if self.current_K == self.kfold.K - 1 and datasep == Separation.TEST:
+            res = np.zeros((num_classes, num_classes))
+            indices = np.array([self.all_test_y_gt, self.all_test_y_pred]).astype(np.int64)
+            np.add.at(res, indices, 1)
+            res = res * 100 / res.sum(1)[:, np.newaxis]
+            df = pd.DataFrame(data=res, index=self.kfold._ulabels, columns=self.kfold._ulabels)
+            ax = sns.heatmap(df, annot=True, vmin=0, vmax=100, fmt=".1f", annot_kws={"fontsize":15})
+            for t in ax.texts: t.set_text(t.get_text() + "%")
+            plt.xlabel('GT')
+            plt.ylabel('Pred')
+            plt.savefig()
 
-        return np.array([loss, acc, f1, sens, spec, auc, p])
+        print(f'epoch{self.epoch} separation {datasep} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f} p-value {p:.3f} precision {pre:.2f} recall {rec:.2f}.', flush=True)
+            
+        return np.array([loss, acc, f1, sens, spec, auc, rec, pre, p])
 
     def best_epoch_criteria(self, best_epoch: int) -> bool:
         val = self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch, self.best_epoch_criterion_idx]
@@ -194,7 +218,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
     @property
     def criteria_names(self) -> List[str]:
-        return super().criteria_names + ['ACC', 'F1', 'Sens', 'Spec', 'AUC', 'P']
+        return super().criteria_names + ['ACC', 'F1', 'Sens', 'Spec', 'AUC', 'Recall', 'Precision', 'P']
 
     @property
     def best_epoch_criterion_idx(self) -> int:
