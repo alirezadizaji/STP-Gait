@@ -151,7 +151,9 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         f1 = f1_score(self.y_gt, self.y_pred, average='macro') * 100
         auc = roc_auc_score(self.y_gt, y_pred_one_hot, multi_class='ovr') * 100
 
-        observed = [self.y_pred, self.y_gt]
+        observed = np.zeros((2, num_classes))
+        np.add.at(observed[0], self.y_pred, 1)
+        np.add.at(observed[1], self.y_gt, 1)
         _, p, *_ = chi2_contingency(observed)
 
         print(f'epoch{self.epoch} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f} p-value {p:.3f}', flush=True)
@@ -176,12 +178,14 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         f1 = f1_score(self.y_gt, self.y_pred, average='macro') * 100
         auc = roc_auc_score(self.y_gt, y_pred_one_hot, multi_class='ovr') * 100
 
-        observed = [self.y_pred, self.y_gt]
+        observed = np.zeros((2, num_classes))
+        np.add.at(observed[0], self.y_pred, 1)
+        np.add.at(observed[1], self.y_gt, 1)
         _, p, *_ = chi2_contingency(observed)
 
         print(f'epoch{self.epoch} separation {datasep} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f} p-value {p:.3f}.', flush=True)
 
-        return np.array([loss, acc, f1, sens, spec, auc])
+        return np.array([loss, acc, f1, sens, spec, auc, p])
 
     def best_epoch_criteria(self, best_epoch: int) -> bool:
         val = self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch, self.best_epoch_criterion_idx]
