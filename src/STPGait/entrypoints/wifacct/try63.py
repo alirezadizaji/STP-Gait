@@ -43,7 +43,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
             device="cuda:0",
             phase="EVAL",
             eval_batch_size=32,
-            save_log_in_file=False,
+            save_log_in_file=True,
             model_runtime_recording=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )

@@ -25,10 +25,11 @@ class Entrypoint(E):
         kfold = GraphSkeletonKFoldOperator(
             config=SkeletonKFoldConfig(
                 kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0, filterout_unlabeled=False),
-                load_dir="../../Data/output_1.pkl",
+                load_dir="../../Data/cond12metaclass_PS.pkl",
                 filterout_hardcases=True,
-                savename="processed_120c.pkl",
-                proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)))
+                savename="Processed_meta_PS_balanced.pkl",
+                proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120),
+                num_unlabeled=500 , num_per_class=100, metaclass=True))
             )
         config = BaseConfig(
             try_num=80,
