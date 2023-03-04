@@ -101,27 +101,3 @@ class SkeletonMultiPklKFoldOperator(SkeletonKFoldOperator[TT, C]):
             split_unlabeled.append(np.nonzero(mask))
 
         return split_unlabeled
-
-    def get_ignore_mask(self) -> np.ndarray:
-        labels = self.get_labels()
-        ignore_mask = np.zeros_like(labels, dtype=np.bool)
-        if self.conf.kfold_config.remove_labels:
-            ignore_mask = labels[:, np.newaxis] == np.array(self.conf.kfold_config.remove_labels)[np.newaxis, :]
-            ignore_mask = ignore_mask.sum(1) > 0
-
-        return ignore_mask
-
-    def get_labels(self) -> np.ndarray:
-        return self._labels
-
-    def get_numeric_labels(self) -> np.ndarray:
-        labels = self.get_labels()
-        numeric_labels = np.full(labels.size, fill_value=-np.inf, dtype=np.int64)
-        for i, l in enumerate(self._ulabels):
-            l_idxs = np.nonzero(labels == l)
-            numeric_labels[l_idxs] = i
-
-        return numeric_labels
-
-    def get_labeled_mask(self) -> np.ndarray:
-        return self.get_labels() != "unlabeled"
