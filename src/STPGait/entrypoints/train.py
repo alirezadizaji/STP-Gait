@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import os
+import time
 from tqdm import tqdm
 from typing import Dict, Generic, List, TYPE_CHECKING, Optional, TypeVar, Union
 
@@ -25,6 +26,9 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
         self._criteria_vals = np.full((2, self.conf.training_config.num_epochs, len(self.criteria_names)), fill_value=-np.inf)
         self._TRAIN_CRITERION_IDX = 0
         self._VAL_CRITERION_IDX = 1
+
+        self._backward_recorded: bool = False
+        self._forward_recorded: bool = False
 
     @property
     def weight_save_dir(self):
@@ -126,10 +130,27 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
                 if isinstance(data[j], torch.Tensor):
                     data[j] = data[j].to(self.conf.device)
             data = self.data_preprocessing(data)
+            
+            if not self._forward_recorded:
+                start_time = time.time()
+            
             x: OUT = self._model_forwarding(data)
+            
+            if not self._forward_recorded:
+                print(f"$$$ Model forward time: {time.time() - start_time}s. $$$", flush=True)
+                self._forward_recorded = True
+
             loss = self._calc_loss(x, data)
 
+            if not self._backward_recorded:
+                start_time = time.time()
+
             loss.backward()
+
+            if not self._backward_recorded:
+                print(f"$$$ Model backward time: {time.time() - start_time}. $$$", flush=True)
+                self._backward_recorded = True
+
             self.optimizer.step()
             self.optimizer.zero_grad()
 
@@ -253,7 +274,6 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
         test = criteria[self.best_epoch_criterion_idx]
         
         print(f"@@@@@ Best criteria ValK {self.kfold.valK} epoch {self.epoch} @@@@@\n---> criterion: {self.criteria_names[self.best_epoch_criterion_idx]}, val: {val:.2f}, test: {test:.2f} <----", flush=True)
-
 
     def run(self):
         self.fold_test_criterion: np.ndarray = np.full((len(self.criteria_names), self.kfold.K), fill_value=-np.inf)

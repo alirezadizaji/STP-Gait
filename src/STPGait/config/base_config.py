@@ -33,6 +33,9 @@ class BaseConfig:
     phase: Phase = Phase.TRAIN
     """ Phase to Run """
     
+    model_runtime_recording: bool = False
+    """ Runtime recording of the model """
+    
     @property
     def save_dir(self):
         """ the root location in which log files, visualization outputs and model weights are saved """
