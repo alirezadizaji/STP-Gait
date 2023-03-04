@@ -36,9 +36,21 @@ class Entrypoint(E):
             try_name="wifacct_stgcn_balanced_ss",
             device="cuda:0",
             eval_batch_size=12,
-            save_log_in_file=True,
+            save_log_in_file=False,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50, batch_size=12)
         )
         TrainEntrypoint.__init__(self, kfold, config)
 
         self._edge_index: torch.Tensor = None
+    
+    def get_model(self) -> nn.Module:
+        
+        in_channels = 2
+        num_point = 25
+        num_person=1
+        num_classes = self.kfold._ulabels.size
+
+        model1 = Model1(in_channels, num_classes, True, None)
+        model2 = Model2(model1.A, num_classes, True, None)
+        model = WiFaCCT[Model1, Model2](model1, model2, num_frames=193, num_aux_branches=5)
+        return model
