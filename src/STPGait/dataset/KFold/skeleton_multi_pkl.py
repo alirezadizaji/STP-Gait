@@ -1,10 +1,10 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import os
 from typing import Dict, Generic, List, TypeVar
 
 import numpy as np
 
-from .core import KFoldOperator, KFoldConfig
+from .core import KFoldOperator
 from ...data import read_multi_pkl_gait_data
 from ..skeleton import SkeletonDataset
 from ...enums import Separation
@@ -15,7 +15,7 @@ from .skeleton import SkeletonKFoldConfig, SkeletonKFoldOperator
 
 @dataclass
 class SkeletonKFoldMultiPklConfig(SkeletonKFoldConfig):
-    load_dir: List[str] = []
+    load_dir: List[str] = field(default_factory=list)
     unite_save_dir: str = None
 
 TT = TypeVar('TT', bound=SkeletonDataset)
@@ -37,8 +37,10 @@ class SkeletonMultiPklKFoldOperator(SkeletonKFoldOperator[TT, C]):
         self.conf.kfold_config.K = len(self.conf.load_dir)
         print(f"@@@ SkeletonMultiPklKFoldOperator WARNING: KFold is changed from {prev_K} to {self.conf.kfold_config.K} permanently. @@@", flush=True)
 
-        assert os.path.isfile(self.conf.load_dir), f"The given directory ({self.conf.load_dir}) should determine a file path (CSV); got directory instead."
-        root_dir = os.path.dirname(self.conf.load_dir)
+        for l in self.conf.load_dir:
+            assert os.path.isfile(l), f"The given directory ({l}) should determine a file path (CSV); got directory instead."
+        
+        root_dir = os.path.dirname(self.conf.unite_save_dir)
         save_dir = os.path.join(root_dir, self.conf.savename)
         if not os.path.exists(save_dir):
             read_multi_pkl_gait_data(self.conf.load_dir, self.conf.unite_save_dir, root_dir, self.conf.savename, self.conf.proc_conf)
@@ -76,7 +78,7 @@ class SkeletonMultiPklKFoldOperator(SkeletonKFoldOperator[TT, C]):
         self._node_invalidity = self._get_node_invalidity()         # ..., V
         self._frame_invalidity = self._node_invalidity.sum(-1) > 0
 
-        super().__init__(**self.conf.kfold_config.__dict__)
+        KFoldOperator.__init__(self, **self.conf.kfold_config.__dict__)
 
     def split_labeled(self) -> List[np.ndarray]:
         labels = self.get_labels()
@@ -86,8 +88,8 @@ class SkeletonMultiPklKFoldOperator(SkeletonKFoldOperator[TT, C]):
         for i, l in enumerate(self._ulabels):
             for k in range(self.conf.kfold_config.K):
                 mask = np.logical_and(labels == l, self._pkl_no == k)
-                l_idxs = np.nonzero(mask)
-                if i in label_to_splits:
+                l_idxs = np.nonzero(mask)[0]
+                if not i in label_to_splits:
                     label_to_splits[i] = [None for _ in range(self.conf.kfold_config.K)]
                 label_to_splits[i][k] = l_idxs
 
