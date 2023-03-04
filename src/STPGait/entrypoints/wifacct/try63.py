@@ -43,7 +43,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
             device="cuda:0",
             phase="EVAL",
             eval_batch_size=32,
-            save_log_in_file=True,
+            save_log_in_file=False,
             model_runtime_recording=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
@@ -193,15 +193,20 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
         if datasep == Separation.TEST:
             res = np.zeros((num_classes, num_classes))
-            indices = np.array([self.y_gt, self.y_pred]).astype(np.int64)
-            np.add.at(res, indices, 1)
+            np.add.at(res, (self.y_gt, self.y_pred), 1)
             res = res * 100 / res.sum(1)[:, np.newaxis]
+
             df = pd.DataFrame(data=res, index=self.kfold._ulabels, columns=self.kfold._ulabels)
-            ax = sns.heatmap(df, annot=True, vmin=0, vmax=100, fmt=".1f", annot_kws={"fontsize":15})
+            ax = sns.heatmap(df, annot=True, vmin=0, vmax=100, fmt=".1f", annot_kws={"fontsize":12})
             for t in ax.texts: t.set_text(t.get_text() + "%")
+            
+            plt.xticks(rotation = 20)
+            plt.yticks(rotation = 45)
             plt.xlabel('GT')
             plt.ylabel('Pred')
+            
             save_dir = os.path.join(self.conf.save_dir, "cm", f"test{self.kfold.testK}", "img.png")
+            os.makedirs(os.path.dirname(save_dir), exist_ok=True)
             plt.savefig(save_dir, dpi=600, bbox_inches='tight')
 
         print(f'epoch{self.epoch} separation {datasep} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f} p-value {p:.3f} precision {pre:.2f} recall {rec:.2f}.', flush=True)
