@@ -44,44 +44,54 @@ class KFoldOperator(ABC, Generic[T]):
 
         labels = self.get_labels()
         labeled_mask = self.get_labeled_mask()
+        self._ulabels = self.get_unique_labels()
+        self._numeric_labels = self.get_numeric_labels()
+
         assert labels.size == labeled_mask.size, "Mismatch size between labels and the mask."
 
         num_samples = labels.size
         
-        ignore_mask = np.zeros_like(labels, dtype=np.bool)
-        if remove_labels:
-            ignore_mask = labels[:, np.newaxis] == np.array(remove_labels)[np.newaxis, :]
-            ignore_mask = ignore_mask.sum(1) > 0
+        self._label_to_splits = self.split_labeled()
+        self._unlabeled_to_splits = self.split_unlabeled()
 
-        # First, split indices between separations using non-ignored, labeled samples
-        mask1 = np.logical_and(~ignore_mask, labeled_mask)
-        self._ulabels = np.unique(labels[mask1])
-        self._numeric_labels = np.full(labels.size, fill_value=-np.inf, dtype=np.int64)
-        self._label_to_splits: Dict[int, List[np.ndarray]] = {}
-
-        for i, l in enumerate(self._ulabels):
-            l_idxs = np.nonzero(labels == l)
-            self._numeric_labels[l_idxs] = i
-            self._label_to_splits[i] = np.array_split(l_idxs[0], K)
-        
-        remained = (~ignore_mask).sum()
+        remained = (~self.get_ignore_mask()).sum()
         print(f"### {remained} out of {num_samples} remained after removing `{remove_labels}`. Remained labels: `{self._ulabels}` ###", flush=True)
         print(f"### {labeled_mask.sum()} out of {labels.size} are labeled. ###", flush=True)
 
-        # Second, split indices between separations using unlabeled samples
-        mask2 = ~labeled_mask
-        unl_idxs = np.nonzero(mask2)
-        self._unlabeled_to_splits: List[np.ndarray] = np.array_split(unl_idxs[0], K)
+    @abstractmethod
+    def split_labeled() -> Dict[int, List[np.ndarray]]:
+        """ It returns a list of indices per label, where each list is a separate fold. """
 
+    @abstractmethod
+    def split_unlabeled() -> List[np.ndarray]:
+        """ It returns a list of indices for unlabeled samples, each one is usable as a separate fold. """
+
+    @abstractmethod
+    def get_ignore_mask() -> np.ndarray:
+        """ It returns a mask which if it is False, that index must be ignored during data loading. """
 
     @abstractmethod
     def get_labels(self) -> np.ndarray:
         """ This returns label sets, to create Train/Val/Test KFolds """    
 
     @abstractmethod
+    def get_numeric_labels(self) -> np.ndarray:
+        """ Numeric conversion of labels to be used """
+
+    @abstractmethod
     def get_labeled_mask(self) -> np.ndarray:
         """ This returns a mask, determining if a sample is labeled or not. """
     
+    def get_unique_labels(self) -> np.ndarray:
+        """ A list of unique labels used for the task. """
+        
+        labels = self.get_labels()
+        labeled_mask = self.get_labeled_mask()
+        ignore_mask = self.get_ignore_mask()
+        
+        mask1 = np.logical_and(~ignore_mask, labeled_mask)
+        return np.unique(labels[mask1])
+
     @abstractmethod
     def set_sets(self, train_indices: np.ndarray, val_indices: np.ndarray, 
             test_indices: np.ndarray) -> Dict[Separation, T]:

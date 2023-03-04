@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import os
-from typing import Dict, Generic, TypeVar
+from typing import Dict, Generic, List, TypeVar
 
 import numpy as np
 
@@ -125,9 +125,43 @@ class SkeletonKFoldOperator(KFoldOperator[TT], Generic[TT, C]):
 
         return node_invalidity
         
-        
+    def split_labeled(self) -> List[np.ndarray]:
+        labels = self.get_labels()
+
+        label_to_splits: Dict[int, List[np.ndarray]] = {}
+
+        for i, l in enumerate(self._ulabels):
+            l_idxs = np.nonzero(labels == l)
+            label_to_splits[i] = np.array_split(l_idxs[0], self.conf.kfold_config.K)
+
+        return label_to_splits
+
+    def split_unlabeled(self) -> List[np.ndarray]:
+        labeled_mask = self.get_labeled_mask()
+        mask2 = ~labeled_mask
+        unl_idxs = np.nonzero(mask2)
+        return np.array_split(unl_idxs[0], self.conf.kfold_config.K)
+
+    def get_ignore_mask(self) -> np.ndarray:
+        labels = self.get_labels()
+        ignore_mask = np.zeros_like(labels, dtype=np.bool)
+        if self.conf.kfold_config.remove_labels:
+            ignore_mask = labels[:, np.newaxis] == np.array(self.conf.kfold_config.remove_labels)[np.newaxis, :]
+            ignore_mask = ignore_mask.sum(1) > 0
+
+        return ignore_mask
+
     def get_labels(self) -> np.ndarray:
         return self._labels
+
+    def get_numeric_labels(self) -> np.ndarray:
+        labels = self.get_labels()
+        numeric_labels = np.full(labels.size, fill_value=-np.inf, dtype=np.int64)
+        for i, l in enumerate(self._ulabels):
+            l_idxs = np.nonzero(labels == l)
+            numeric_labels[l_idxs] = i
+
+        return numeric_labels
 
     def get_labeled_mask(self) -> np.ndarray:
         return self.get_labels() != "unlabeled"
