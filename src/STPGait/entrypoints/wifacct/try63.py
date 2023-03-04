@@ -1,6 +1,7 @@
 from typing import List, Tuple
 
 import numpy as np
+from scipy.stats import chi2_contingency
 from sklearn.metrics import multilabel_confusion_matrix, f1_score, roc_auc_score, accuracy_score
 import torch
 from torch import nn
@@ -149,9 +150,13 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
         f1 = f1_score(self.y_gt, self.y_pred, average='macro') * 100
         auc = roc_auc_score(self.y_gt, y_pred_one_hot, multi_class='ovr') * 100
-        print(f'epoch{self.epoch} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f}', flush=True)
 
-        return np.array([loss, acc, f1, sens, spec, auc])
+        observed = [self.y_pred, self.y_gt]
+        _, p, *_ = chi2_contingency(observed)
+
+        print(f'epoch{self.epoch} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f} p-value {p:.3f}', flush=True)
+
+        return np.array([loss, acc, f1, sens, spec, auc, p])
 
     def _eval_epoch_end(self, datasep: Separation) -> np.ndarray:
         num_classes = self.kfold._ulabels.size
@@ -170,7 +175,11 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
         f1 = f1_score(self.y_gt, self.y_pred, average='macro') * 100
         auc = roc_auc_score(self.y_gt, y_pred_one_hot, multi_class='ovr') * 100
-        print(f'epoch{self.epoch} separation {datasep} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f}', flush=True)
+
+        observed = [self.y_pred, self.y_gt]
+        _, p, *_ = chi2_contingency(observed)
+
+        print(f'epoch{self.epoch} separation {datasep} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f} p-value {p:.3f}.', flush=True)
 
         return np.array([loss, acc, f1, sens, spec, auc])
 
@@ -181,7 +190,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
     @property
     def criteria_names(self) -> List[str]:
-        return super().criteria_names + ['ACC', 'F1', 'Sens', 'Spec', 'AUC']
+        return super().criteria_names + ['ACC', 'F1', 'Sens', 'Spec', 'AUC', 'P']
 
     @property
     def best_epoch_criterion_idx(self) -> int:
