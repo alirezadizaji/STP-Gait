@@ -1,3 +1,4 @@
+import os
 from typing import List, Tuple
 
 import matplotlib.pyplot as plt
@@ -109,10 +110,6 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         self.y_gt = list()
         self.losses = list()
 
-        if self.current_K == 0:
-            self.all_test_y_pred = list()
-            self.all_test_y_gt = list()
-
     def _eval_start(self) -> None:
         self._train_start()
 
@@ -125,8 +122,6 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
         self.y_pred += y_pred.tolist()
         self.y_gt += y[labeled].tolist()
-        self.all_test_y_gt += y[labeled].tolist()
-        self.all_test_y_pred += y_pred.tolist()
 
         if iter_num % 20 == 0:
             print(f'epoch {self.epoch} iter {iter_num} loss value {np.mean(self.losses)}', flush=True)
@@ -196,9 +191,9 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         np.add.at(observed[1], self.y_gt, 1)
         _, p, *_ = chi2_contingency(observed)
 
-        if self.current_K == self.kfold.K - 1 and datasep == Separation.TEST:
+        if datasep == Separation.TEST:
             res = np.zeros((num_classes, num_classes))
-            indices = np.array([self.all_test_y_gt, self.all_test_y_pred]).astype(np.int64)
+            indices = np.array([self.y_gt, self.y_pred]).astype(np.int64)
             np.add.at(res, indices, 1)
             res = res * 100 / res.sum(1)[:, np.newaxis]
             df = pd.DataFrame(data=res, index=self.kfold._ulabels, columns=self.kfold._ulabels)
@@ -206,7 +201,8 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
             for t in ax.texts: t.set_text(t.get_text() + "%")
             plt.xlabel('GT')
             plt.ylabel('Pred')
-            plt.savefig()
+            save_dir = os.path.join(self.conf.save_dir, "cm", f"test{self.kfold.testK}", "img.png")
+            plt.savefig(save_dir, dpi=600, bbox_inches='tight')
 
         print(f'epoch{self.epoch} separation {datasep} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f} p-value {p:.3f} precision {pre:.2f} recall {rec:.2f}.', flush=True)
             
