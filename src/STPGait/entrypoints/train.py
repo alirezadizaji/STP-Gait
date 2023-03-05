@@ -258,7 +258,6 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
         
         print(f"@@@@@ Best criteria ValK {self.kfold.valK} epoch {self.epoch} @@@@@\n---> criterion: {self.criteria_names[self.best_epoch_criterion_idx]}, val: {val:.2f}, test: {test:.2f} <----", flush=True)
 
-
     def _main_phase_eval(self):
         files = os.listdir(self.weight_save_dir)
         if len(files) != 1:
