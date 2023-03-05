@@ -4,6 +4,7 @@ import time
 from tqdm import tqdm
 from typing import Dict, Generic, List, TYPE_CHECKING, Optional, TypeVar, Union
 
+from torch import nn
 from dig.xgraph.models import *
 import matplotlib.pyplot as plt
 import numpy as np
@@ -282,10 +283,11 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
         for self.current_K in range(self.kfold.K):
             with self.kfold:
                 self.model = self.get_model()
-                self.model.to(self.conf.device)
+                if isinstance(self.model, nn.Module):
+                    self.model.to(self.conf.device)
+                    self.set_optimizer(self.conf.training_config.optim_type)
                 self.set_loaders()
-                self.set_optimizer(self.conf.training_config.optim_type)
-        
+                
                 if self.conf.phase == Phase.TRAIN:
                     self._main_phase_train()
                 elif self.conf.phase == Phase.EVAL:
