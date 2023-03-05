@@ -45,7 +45,7 @@ def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl",
     unlabeled = df[df[label_column] == "unlabeled"]
     
     if config.num_unlabeled != None:
-        unlabeled = unlabeled.sample(n = config.num_unlabeled)
+        unlabeled = unlabeled.sample(n = config.num_unlabeled, random_state=12345)
     if config.num_per_class != None:
         new_labeled = pd.DataFrame(columns=list(labeled.columns))
         label_ls = labeled[label_column].unique()
@@ -55,7 +55,7 @@ def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl",
             if config.num_per_class > num_rows:
                 new_labeled = pd.concat([new_labeled, df_l])
             else:
-                new_labeled = pd.concat([new_labeled, df_l.sample(n = config.num_per_class)])
+                new_labeled = pd.concat([new_labeled, df_l.sample(n = config.num_per_class, random_state=12345)])
         labeled = new_labeled
     df = pd.concat([unlabeled, labeled])
 
@@ -64,7 +64,7 @@ def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl",
         if not unlabeled.empty:
             raise Exception("Dataset contains unlabeled data")
         n_sample = int(config.supervised_percentage * df.shape[0]) 
-        labeled = df.sample(n = n_sample)
+        labeled = df.sample(n = n_sample, random_state=12345)
         unlabeled = df.drop(labeled.index)
         unlabeled[label_column] = 'unlabeled'
         df = pd.concat([unlabeled, labeled])
