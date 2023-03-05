@@ -10,6 +10,7 @@ from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, K
 from ....data.read_gait_data import ProcessingGaitConfig
 from ....enums import Optim
 from ....models.wifacct import WiFaCCT
+from ....models.gcn_lstm_transformer import GCNLayerConfig, LSTMConfig
 from ....models.wifacct.lstm_gcn import Model1, Model2
 from ....preprocess.main import PreprocessingConfig
 from ...train import TrainEntrypoint
@@ -47,8 +48,8 @@ class Entrypoint(E):
 
     def get_model(self) -> nn.Module:
         num_classes = self.kfold._ulabels.size
-        model1 = Model1(n=1, get_gcn_edges= lambda T: torch.from_numpy(Skeleton.get_vanilla_edges(T)[0]))
-        model2 = Model2(num_classes=num_classes, num_frames=375, n=1, get_gcn_edges= lambda T: torch.from_numpy(Skeleton.get_vanilla_edges(T)[0]))
+        model1 = Model1(n=1, gcn_conf=GCNLayerConfig(60, 2), lstm_conf=LSTMConfig(), get_gcn_edges= lambda T: torch.from_numpy(Skeleton.get_vanilla_edges(T)[0]))
+        model2 = Model2(num_classes=num_classes, num_frames=375, n=1, gcn_conf=GCNLayerConfig(60, 2), lstm_conf=LSTMConfig(), get_gcn_edges= lambda T: torch.from_numpy(Skeleton.get_vanilla_edges(T)[0]))
         
         model = WiFaCCT[Model1, Model2](model1, model2, num_aux_branches=3)
         return model
