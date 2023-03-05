@@ -33,7 +33,7 @@ class BaseConfig:
     phase: Phase = Phase.TRAIN
     """ Phase to Run """
     
-    model_runtime_recording: bool = False
+    model_runtime_recording: bool = True
     """ Runtime recording of the model """
     
     @property
