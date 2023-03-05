@@ -208,6 +208,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
             save_dir = os.path.join(self.conf.save_dir, "cm", f"test{self.kfold.testK}", "img.png")
             os.makedirs(os.path.dirname(save_dir), exist_ok=True)
             plt.savefig(save_dir, dpi=600, bbox_inches='tight')
+            plt.close()
 
         print(f'epoch{self.epoch} separation {datasep} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f} p-value {p:.3f} precision {pre:.2f} recall {rec:.2f}.', flush=True)
             

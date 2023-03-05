@@ -214,7 +214,8 @@ class TrainEntrypoint(MainEntrypoint[T], ABC, Generic[IN, OUT, T]):
             fig.delaxes(axs[rowi, coli])
 
         fig.savefig(save_pth, dpi=600, bbox_inches='tight', format="png")
-
+        plt.close()
+        
     def _main_phase_train(self):
         num_epochs = self.conf.training_config.num_epochs
         best_epoch = None
