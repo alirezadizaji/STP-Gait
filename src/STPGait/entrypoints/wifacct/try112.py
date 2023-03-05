@@ -1,11 +1,14 @@
 from typing import List, Tuple
 
 import torch
+from torch import nn
 
 from ...config import BaseConfig, TrainingConfig
 from ...dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
 from ...data.read_gait_data import ProcessingGaitConfig
 from ...enums import Optim
+from ...models.wifacct import WiFaCCT
+from ...models.wifacct.vivit import Model1, Model2
 from ...preprocess.main import PreprocessingConfig
 from ..train import TrainEntrypoint
 from .try76 import Entrypoint as E
@@ -39,3 +42,13 @@ class Entrypoint(E):
     @property
     def frame_size(self):
         return 360
+    
+    def get_model(self) -> nn.Module:
+        num_classes = self.kfold._ulabels.size
+
+        d = 72
+        model1 = Model1(d_model=d, nhead=8, n_enc_layers=2)
+        model2 = Model2(num_classes, d_model=d, nhead=8, n_enc_layers=1)
+        
+        model = WiFaCCT[Model1, Model2](model1, model2, num_aux_branches=3)
+        return model
