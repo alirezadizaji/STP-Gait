@@ -1,15 +1,11 @@
 from typing import List, Tuple
 
 import torch
-from torch import nn
 
 from ...config import BaseConfig, TrainingConfig
-from ...context import Skeleton
 from ...dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
 from ...data.read_gait_data import ProcessingGaitConfig
 from ...enums import Optim
-from ...models.wifacct import WiFaCCT
-from ...models.wifacct.lstm_gcn import Model
 from ...preprocess.main import PreprocessingConfig
 from ..train import TrainEntrypoint
 from .dynamic_coef.try113 import Entrypoint as E
