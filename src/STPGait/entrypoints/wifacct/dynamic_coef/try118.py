@@ -35,8 +35,8 @@ class Entrypoint(E):
             try_name="wifacct_gcn_rerun",
             device="cuda:0",
             eval_batch_size=32,
-            save_log_in_file=True,
-            training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
+            save_log_in_file=False,
+            training_config=TrainingConfig(num_epochs=1, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
         TrainEntrypoint.__init__(self, kfold, config)
 
@@ -71,8 +71,8 @@ class Entrypoint(E):
                     data[i] = data[i].to(self.conf.device)
             y_pred += self._model_forwarding(data)[0].argmax(1).cpu().numpy().tolist()
 
-        y_pred = torch.from_numpy(y_pred)
-        self.loader.dataset.Y = y_pred
+        y_pred = torch.Tensor(y_pred).long()
+        loader.dataset.Y[~loader.dataset.labeled] = y_pred[~loader.dataset.labeled]
 
     def _calc_loss(self, x: OUT, data: IN) -> torch.Tensor:
         _, y, _, labeled = data
@@ -95,7 +95,7 @@ class Entrypoint(E):
 
     def run(self):
         self.fold_test_criterion: np.ndarray = np.full((len(self.criteria_names), self.kfold.K), fill_value=-np.inf)
-        self.fold_test_criterion_rerun = np.full_like(self.fold_test_criterion)
+        self.fold_test_criterion_rerun = np.full_like(self.fold_test_criterion, fill_value=-np.inf)
         print(f"@@@@@@@@@@@@ PHASE {self.conf.phase} IN PROGRESS... @@@@@@@@@@@@", flush=True)
         
         for self.current_K in range(self.kfold.K):
