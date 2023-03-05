@@ -20,8 +20,9 @@ class MainEntrypoint(ABC, Generic[T]):
     
         self.kfold: KFoldOperator = kfold
         self.model: nn.Module = self.get_model()
-        self.model.to(self.conf.device)
-        self.set_optimizer(self.conf.training_config.optim_type)
+        if isinstance(self.model, nn.Module):
+            self.model.to(self.conf.device)
+            self.set_optimizer(self.conf.training_config.optim_type)
         self.train_loader = self.val_loader = self.test_loader = None
     
     def set_loaders(self) -> None:
