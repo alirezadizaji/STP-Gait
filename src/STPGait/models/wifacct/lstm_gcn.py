@@ -10,7 +10,7 @@ import torch
 from ...context import Skeleton
 from ...models.gcn_lstm_transformer import LSTMConfig, GCNLayerConfig, Protocol1, GCNLayer
 
-class Model(nn.Module):
+class Model1(nn.Module):
     def __init__(self,
             n: int = 2,
             lstm_conf: LSTMConfig = LSTMConfig(), 
@@ -69,6 +69,8 @@ class Model(nn.Module):
             Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: prediction, loss1 (unsupervised), loss2 (supervised)
         """
 
+        if x.ndim == 4:
+            x = x.flatten(2)
         if self.edge_index is None:
             self.edge_index = self.get_gcn_edges(x.size(1)).to(x.device)
 
@@ -97,4 +99,27 @@ class Model(nn.Module):
             x1 = x1.reshape(N, T, -1, D).reshape(N, T, -1)
 
         x1 = x1.reshape(N, T, -1, D)
+        return x1
+
+class Model2(Model1):
+    def __init__(self, num_classes: int, num_frames: int, n: int = 2, lstm_conf: LSTMConfig = LSTMConfig(), gcn_conf: GCNLayerConfig = GCNLayerConfig(), get_gcn_edges: Callable[[int], torch.Tensor] = lambda T: Skeleton.get_interframe_edges_mode2(T, I=30, offset=20), init_lstm_hidden_state: Protocol1 = lambda lstm_num_layer, batch_size, hidden_size: torch.randn(lstm_num_layer, batch_size, hidden_size)) -> None:
+        super().__init__(n, lstm_conf, gcn_conf, get_gcn_edges, init_lstm_hidden_state)
+        fc_hidden = 50
+        h1 = fc_hidden * num_frames
+        
+        self.fc_classfier = nn.Sequential(
+            nn.Dropout(0.2),
+            nn.Flatten(1),
+            nn.Linear(h1, fc_hidden),
+            nn.ReLU(),
+            nn.Linear(fc_hidden, num_classes),
+            nn.LogSoftmax(dim=1),
+        )
+    
+    def forward(self, x: torch.Tensor, x_valid: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        x1 = super().forward(x, x_valid)
+        x1 = x1.mean((1, 2))
+
+        x1 = self.fc_classfier(x1)
+
         return x1

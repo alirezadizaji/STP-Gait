@@ -2,6 +2,7 @@ from typing import List, Tuple
 
 import torch
 from torch import nn
+from torch.utils.data import DataLoader
 
 from ....config import BaseConfig, TrainingConfig
 from ....context import Skeleton
@@ -9,7 +10,7 @@ from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, K
 from ....data.read_gait_data import ProcessingGaitConfig
 from ....enums import Optim
 from ....models.wifacct import WiFaCCT
-from ....models.wifacct.lstm_gcn import Model
+from ....models.wifacct.lstm_gcn import Model1, Model2
 from ....preprocess.main import PreprocessingConfig
 from ...train import TrainEntrypoint
 from ..try63 import Entrypoint as E
@@ -45,14 +46,16 @@ class Entrypoint(E):
 
 
     def get_model(self) -> nn.Module:
-        model1 = Model(n=1, get_gcn_edges= lambda T: torch.from_numpy(Skeleton.get_vanilla_edges(T)[0]))
-        model2 = Model(n=1, get_gcn_edges= lambda T: torch.from_numpy(Skeleton.get_vanilla_edges(T)[0]))
+        num_classes = self.kfold._ulabels.size
+        model1 = Model1(n=1, get_gcn_edges= lambda T: torch.from_numpy(Skeleton.get_vanilla_edges(T)[0]))
+        model2 = Model2(num_classes=num_classes, num_frames=375, n=1, get_gcn_edges= lambda T: torch.from_numpy(Skeleton.get_vanilla_edges(T)[0]))
         
-        model = WiFaCCT[Model, Model](model1, model2, num_aux_branches=3)
+        model = WiFaCCT[Model1, Model2](model1, model2, num_aux_branches=3)
         return model
 
     def _model_forwarding(self, data):
-        x, _, node_invalid, _ = data[0][..., [0, 1]].to(self.conf.device) # Use X-Y features
+        x = data[0][..., [0, 1]].to(self.conf.device) # Use X-Y features
+        node_invalid = data[2]
         node_valid = ~node_invalid.flatten(1)
 
         out = self.model(x, m1_args=dict(x_valid=node_valid), m2_args=dict(x_valid=node_valid))
@@ -77,3 +80,8 @@ class Entrypoint(E):
         else:
             loss = loss_unsup
         return loss
+    
+    def set_loaders(self) -> None:
+        self.train_loader = DataLoader(self.kfold.train, batch_size=self.conf.training_config.batch_size, shuffle=self.conf.training_config.shuffle_training, drop_last=True)
+        self.val_loader = DataLoader(self.kfold.val, batch_size=self.conf.eval_batch_size, drop_last=True)
+        self.test_loader = DataLoader(self.kfold.test, batch_size=self.conf.eval_batch_size, drop_last=True)

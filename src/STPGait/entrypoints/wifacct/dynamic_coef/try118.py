@@ -37,7 +37,7 @@ class Entrypoint(E):
             device="cuda:0",
             eval_batch_size=32,
             save_log_in_file=False,
-            training_config=TrainingConfig(num_epochs=1, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
+            training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
         TrainEntrypoint.__init__(self, kfold, config)
 
@@ -78,7 +78,7 @@ class Entrypoint(E):
 
     def _calc_loss(self, x: OUT, data: IN) -> torch.Tensor:
         _, y, _, labeled = data
-        o_main, o_aux = x
+        o_main, _ = x
         if self.rerun:
             labeled = torch.ones_like(y, dtype=np.bool)
 
@@ -86,14 +86,7 @@ class Entrypoint(E):
         yl = y[labeled]
         loss_sup = -torch.mean(oml[torch.arange(yl.numel()), yl])
 
-        y1d = o_main.argmax(1).detach().unsqueeze(1).repeat(1, o_aux.size(1)).flatten()
-        o_aux = o_aux.flatten(0, 1)
-        loss_unsup = -torch.mean(o_aux[torch.arange(y1d.size(0)), y1d])
-
-        loss = 0.2 * loss_unsup
-        if not torch.isnan(loss_sup):
-            loss = loss + loss_sup
-        return loss
+        return loss_sup
 
     def run(self):
         self.fold_test_criterion: np.ndarray = np.full((len(self.criteria_names), self.kfold.K), fill_value=-np.inf)
