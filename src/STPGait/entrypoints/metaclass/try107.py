@@ -90,6 +90,6 @@ class Entrypoint(E):
         # 'parts': parts
         }
         model2 = Model2(**cfgs2)
-        model = WiFaCCT[Model1, Model2](model1, model2, num_frames=385, num_aux_branches=3)
+        model = WiFaCCT[Model1, Model2](model1, model2, num_frames=382, num_aux_branches=3)
         return model
 
