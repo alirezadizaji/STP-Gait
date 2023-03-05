@@ -36,8 +36,8 @@ class Entrypoint(E):
             try_name="wifacct_gcn_rerun",
             device="cuda:0",
             eval_batch_size=32,
-            save_log_in_file=True,
-            training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
+            save_log_in_file=False,
+            training_config=TrainingConfig(num_epochs=1, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
         TrainEntrypoint.__init__(self, kfold, config)
 
@@ -119,6 +119,7 @@ class Entrypoint(E):
                     self.rerun = True
                 
                 self._sub_run()
+                self.rerun = False
 
         cv = {c: np.around(np.mean(v), decimals=4) for c, v in zip(self.criteria_names, self.fold_test_criterion)}
         print(f"@@@ Final Result on {self.kfold.K} KFold operation on test set: {cv} @@@", flush=True)
