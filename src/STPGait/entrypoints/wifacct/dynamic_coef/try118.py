@@ -1,4 +1,5 @@
 import os
+from tqdm import tqdm
 from typing import Tuple
 
 import numpy as np
@@ -62,6 +63,7 @@ class Entrypoint(E):
             self._main_phase_train()
         elif self.conf.phase == Phase.EVAL:
             self._main_phase_eval()
+        
 
     def _relabel(self, loader: DataLoader):
         y_pred = []
@@ -117,3 +119,74 @@ class Entrypoint(E):
                     self.rerun = True
                 
                 self._sub_run()
+
+        cv = {c: np.around(np.mean(v), decimals=4) for c, v in zip(self.criteria_names, self.fold_test_criterion)}
+        print(f"@@@ Final Result on {self.kfold.K} KFold operation on test set: {cv} @@@", flush=True)
+
+        cv = {c: np.around(np.mean(v), decimals=4) for c, v in zip(self.criteria_names, self.fold_test_criterion_rerun)}
+        print(f"@@@ Final Result on rerun {self.kfold.K} KFold operation on test set: {cv} @@@", flush=True)
+        
+    def _main_phase_train(self):
+        num_epochs = self.conf.training_config.num_epochs
+        best_epoch = None
+        for self.epoch in tqdm(range(num_epochs)):
+            
+            self._train_for_one_epoch()
+            
+            criteria = self._validate_for_one_epoch(Separation.VAL, self.val_loader)
+            self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch] = criteria
+            val = self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch, self.best_epoch_criterion_idx]
+            
+            # save only best epoch in terms of validation accuracy             
+            if best_epoch is None or self.best_epoch_criteria(best_epoch):
+                if best_epoch is not None:
+                    self._remove_model_weight(best_epoch)
+                self._save_model_weight()
+                best_epoch = self.epoch
+                print(f"### Best epoch changed to {best_epoch} criteria {val} ###", flush=True)
+
+            # Visualize metrics
+            if self.epoch % 10 == 0:
+                self._visualize()
+
+            # check early stopping if necessary
+            if self.conf.training_config.early_stop is not None \
+                    and self._early_stopping(best_epoch, self.conf.training_config.early_stop):
+                print(f"*** EARLY STOPPING: epoch No. {self.epoch}, best epoch No. {best_epoch} ***", flush=True)
+                break
+
+        # evaluate best epoch on test set
+        self.epoch = best_epoch
+        self.model.load_state_dict(torch.load(self._get_weight_save_path(self.epoch), map_location=self.conf.device))
+        
+        criteria = self._validate_for_one_epoch(Separation.TEST, self.test_loader)
+        test = criteria[self.best_epoch_criterion_idx]
+        if self.rerun:
+            self.fold_test_criterion_rerun[:, self.kfold.testK] = criteria
+        else:
+            self.fold_test_criterion[:, self.kfold.testK] = criteria
+        
+        val = self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch, self.best_epoch_criterion_idx]
+        
+        print(f"@@@@@ Best criteria ValK {self.kfold.valK} epoch {self.epoch} @@@@@\n---> criterion: {self.criteria_names[self.best_epoch_criterion_idx]}, val: {val:.2f}, test: {test:.2f} <----", flush=True)
+
+    def _main_phase_eval(self):
+        files = os.listdir(self.weight_save_dir)
+        if len(files) != 1:
+            print(f"@@@ WARNING: {self.weight_save_dir} directory should have exactly one saved file; got {len(files)} instead.", flush=True)
+        
+        self.epoch = int(files[0])
+        self.model.load_state_dict(torch.load(self._get_weight_save_path(self.epoch), map_location=self.conf.device))
+        
+        criteria = self._validate_for_one_epoch(Separation.VAL, self.val_loader)
+        self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch] = criteria
+        val = self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch, self.best_epoch_criterion_idx]
+        
+        criteria = self._validate_for_one_epoch(Separation.TEST, self.test_loader)
+        if self.rerun:
+            self.fold_test_criterion_rerun[:, self.kfold.testK] = criteria
+        else:
+            self.fold_test_criterion[:, self.kfold.testK] = criteria
+        test = criteria[self.best_epoch_criterion_idx]
+        
+        print(f"@@@@@ Best criteria ValK {self.kfold.valK} epoch {self.epoch} @@@@@\n---> criterion: {self.criteria_names[self.best_epoch_criterion_idx]}, val: {val:.2f}, test: {test:.2f} <----", flush=True)
