@@ -9,7 +9,7 @@ from ..enums import Step, WalkDirection
 from ..preprocess import preprocessing
 from ..utils import timer
 from ..preprocess.main import PreprocessingConfig
-from ..context import Skeleton
+from ..context import Skeleton, Constants
 
 @dataclass
 class ProcessingGaitConfig:
@@ -45,7 +45,7 @@ def proc_gait_data(load_dir: str, save_dir: str, filename: str="processed.pkl",
     unlabeled = df[df[label_column] == "unlabeled"]
     
     if config.num_unlabeled != None:
-        unlabeled = unlabeled.sample(n = config.num_unlabeled, random_state=12345)
+        unlabeled = unlabeled.sample(n = config.num_unlabeled, random_state=Constants.GLOBAL_SEED)
     if config.num_per_class != None:
         new_labeled = pd.DataFrame(columns=list(labeled.columns))
         label_ls = labeled[label_column].unique()
