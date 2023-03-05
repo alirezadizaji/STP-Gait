@@ -35,7 +35,7 @@ class Entrypoint(E):
             try_name="wifacct_gcn_rerun",
             device="cuda:0",
             eval_batch_size=32,
-            save_log_in_file=False,
+            save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=1, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
         TrainEntrypoint.__init__(self, kfold, config)
