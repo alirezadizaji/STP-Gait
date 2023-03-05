@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import torch
 from torch import nn
 
@@ -11,27 +9,25 @@ from ...models.wifacct import WiFaCCT
 from ...models.wifacct.ms_g3d import Model1, Model2
 from ...preprocess.main import PreprocessingConfig
 from ..train import TrainEntrypoint
-from .try70 import Entrypoint as E
+from .try69 import Entrypoint as E
 
-IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
-OUT = Tuple[torch.Tensor, torch.Tensor]
 
-# try 116 (70 ->)
+# try 121 (69 ->)
 ## Use try100 dataset
 class Entrypoint(E):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(
             config=SkeletonKFoldConfig(
-                kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0, filterout_unlabeled=True),
+                kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0, filterout_unlabeled=False),
                 load_dir="../../Data/cond12metaclass_PS.pkl",
                 filterout_hardcases=True,
                 savename="Processed_meta_PS_balanced.pkl",
-                proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120)
-                , num_unlabeled=500 , num_per_class=100, metaclass=True))
+                proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120),
+                num_unlabeled=500 , num_per_class=100, metaclass=True))
             )
         config = BaseConfig(
-            try_num=116,
-            try_name="wifacct_msg3d_sup_part",
+            try_num=121,
+            try_name="wifacct_msg3d",
             device="cuda:0",
             eval_batch_size=32,
             save_log_in_file=True,
@@ -61,14 +57,3 @@ class Entrypoint(E):
         
         model = WiFaCCT[Model1, Model2](model1, model2, num_frames=191, num_aux_branches=3)
         return model
-
-    def _calc_loss(self, x: OUT, data: IN) -> torch.Tensor:
-        _, y, _, labeled = data
-        o_main, _ = x
-        
-        oml = o_main[labeled]
-        yl = y[labeled]
-        loss_sup = -torch.mean(oml[torch.arange(yl.numel()), yl])
-
-        loss = loss_sup
-        return loss

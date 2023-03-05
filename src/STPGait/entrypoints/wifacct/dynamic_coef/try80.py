@@ -1,18 +1,9 @@
-from typing import List, Tuple
-
-import numpy as np
 import torch
-from torch import nn
-from torch.nn import functional as F
-from torch_geometric.data import Batch, Data
 
 from ....config import BaseConfig, TrainingConfig
-from ....context import Skeleton
 from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
 from ....data.read_gait_data import ProcessingGaitConfig
-from ....enums import Separation, Optim
-from ....models.wifacct import WiFaCCT
-from ....models.wifacct.ms_g3d import Model1, Model2
+from ....enums import Optim
 from ....preprocess.main import PreprocessingConfig
 from ...train import TrainEntrypoint
 from ..try69 import Entrypoint as E
@@ -25,9 +16,9 @@ class Entrypoint(E):
         kfold = GraphSkeletonKFoldOperator(
             config=SkeletonKFoldConfig(
                 kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0, filterout_unlabeled=False),
-                load_dir="../../Data/cond12metaclass_PS.pkl",
+                load_dir="../../Data/output_1.pkl",
                 filterout_hardcases=True,
-                savename="Processed_meta_PS_balanced.pkl",
+                savename="processed_120c.pkl",
                 proc_conf=ProcessingGaitConfig(preprocessing_conf=PreprocessingConfig(critical_limit=120),
                 num_unlabeled=500 , num_per_class=100, metaclass=True))
             )
