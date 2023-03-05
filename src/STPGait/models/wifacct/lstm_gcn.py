@@ -110,7 +110,7 @@ class Model2(Model1):
         self.fc_classfier = nn.Sequential(
             nn.Dropout(0.2),
             nn.Flatten(1),
-            nn.Linear(h1, fc_hidden),
+            nn.Linear(gcn_conf.dim_node, fc_hidden),
             nn.ReLU(),
             nn.Linear(fc_hidden, num_classes),
             nn.LogSoftmax(dim=1),
@@ -119,7 +119,6 @@ class Model2(Model1):
     def forward(self, x: torch.Tensor, x_valid: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         x1 = super().forward(x, x_valid)
         x1 = x1.mean((1, 2))
-
         x1 = self.fc_classfier(x1)
 
         return x1
