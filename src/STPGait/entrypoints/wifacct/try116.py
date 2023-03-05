@@ -2,20 +2,19 @@ from typing import List, Tuple
 
 import torch
 
-from ....config import BaseConfig, TrainingConfig
-from ....dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
-from ....data.read_gait_data import ProcessingGaitConfig
-from ....enums import Optim
-from ....preprocess.main import PreprocessingConfig
-from ...train import TrainEntrypoint
-from ..try75 import Entrypoint as E
+from ...config import BaseConfig, TrainingConfig
+from ...dataset.KFold import GraphSkeletonKFoldOperator, SkeletonKFoldConfig, KFoldConfig
+from ...data.read_gait_data import ProcessingGaitConfig
+from ...enums import Optim
+from ...preprocess.main import PreprocessingConfig
+from ..train import TrainEntrypoint
+from .try70 import Entrypoint as E
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor]
 
-# try 111 (75 ->)
+# try 116 (70 ->)
 ## Use try100 dataset
-## Use dynamic loss coefficient
 class Entrypoint(E):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(
@@ -28,37 +27,24 @@ class Entrypoint(E):
                 , num_unlabeled=500 , num_per_class=100, metaclass=True))
             )
         config = BaseConfig(
-            try_num=111,
-            try_name="wifacct_vivit",
+            try_num=116,
+            try_name="wifacct_msg3d_sup_part",
             device="cuda:0",
             eval_batch_size=32,
             save_log_in_file=True,
-            training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
+            training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50, batch_size=32)
         )
         TrainEntrypoint.__init__(self, kfold, config)
 
         self._edge_index: torch.Tensor = None
 
-    @property
-    def frame_size(self):
-        return 360
-    
-    def _calc_loss(self, x, data):
+    def _calc_loss(self, x: OUT, data: IN) -> torch.Tensor:
         _, y, _, labeled = data
-        o_main, o_aux = x
+        o_main, _ = x
         
         oml = o_main[labeled]
         yl = y[labeled]
         loss_sup = -torch.mean(oml[torch.arange(yl.numel()), yl])
 
-        y1d = o_main.argmax(1).detach().unsqueeze(1).repeat(1, o_aux.size(1)).flatten()
-        o_aux = o_aux.flatten(0, 1)
-        loss_unsup = -torch.mean(o_aux[torch.arange(y1d.size(0)), y1d])
-
-        u = int(self.epoch >= self._start_ul_epoch or not self.model.training)
-        if not torch.isnan(loss_sup):
-            alpha = loss_sup.detach() / loss_unsup.detach()
-            loss = loss_sup + u * alpha * loss_unsup
-        else:
-            loss = loss_unsup
+        loss = loss_sup
         return loss
