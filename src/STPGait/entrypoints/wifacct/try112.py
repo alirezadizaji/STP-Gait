@@ -35,3 +35,7 @@ class Entrypoint(E):
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50, batch_size=32)
         )
         TrainEntrypoint.__init__(self, kfold, config)
+    
+    @property
+    def frame_size(self):
+        return 360

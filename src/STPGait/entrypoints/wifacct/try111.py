@@ -8,12 +8,12 @@ from ...data.read_gait_data import ProcessingGaitConfig
 from ...enums import Optim
 from ...preprocess.main import PreprocessingConfig
 from ..train import TrainEntrypoint
-from .try68 import Entrypoint as E
+from .try75 import Entrypoint as E
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor]
 
-# try 111 (68 ->)
+# try 111 (75 ->)
 ## Use try100 dataset
 class Entrypoint(E):
     def __init__(self) -> None:
@@ -28,7 +28,7 @@ class Entrypoint(E):
             )
         config = BaseConfig(
             try_num=111,
-            try_name="wifacct_gcn_sup_part",
+            try_name="wifacct_vivit",
             device="cuda:0",
             eval_batch_size=32,
             save_log_in_file=True,
@@ -37,3 +37,7 @@ class Entrypoint(E):
         TrainEntrypoint.__init__(self, kfold, config)
 
         self._edge_index: torch.Tensor = None
+
+    @property
+    def frame_size(self):
+        return 360
