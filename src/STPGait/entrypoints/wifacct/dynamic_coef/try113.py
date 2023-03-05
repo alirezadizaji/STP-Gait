@@ -41,6 +41,8 @@ class Entrypoint(E):
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50, batch_size=32)
         )
         TrainEntrypoint.__init__(self, kfold, config)
+        self._start_ul_epoch: int = 10
+
 
     def get_model(self) -> nn.Module:
         model1 = Model(n=1, get_gcn_edges= lambda T: torch.from_numpy(Skeleton.get_vanilla_edges(T)[0]))
