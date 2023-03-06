@@ -83,3 +83,16 @@ class Entrypoint(E):
         output = m(x[1])
         loss = -torch.mean(output[idx, y]) #CE
         return loss
+
+    def _train_iter_end(self, iter_num: int, loss: torch.Tensor, x: OUT, data: IN) -> None:
+        self.losses.append(loss.item())
+
+        y = data[1]
+        x_probs = x[1]
+        y_pred = x_probs.argmax(-1)
+
+        self.y_pred += y_pred.tolist()
+        self.y_gt += y.tolist()
+
+        if iter_num % 20 == 0:
+            print(f'epoch {self.epoch} iter {iter_num} loss value {np.mean(self.losses)}', flush=True)
