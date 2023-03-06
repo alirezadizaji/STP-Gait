@@ -1,20 +1,15 @@
-from typing import List, Tuple
-
-import numpy as np
-from sklearn.metrics import multilabel_confusion_matrix, f1_score, roc_auc_score, accuracy_score
 import torch
 from torch import nn
 
-from ...config import BaseConfig, TrainingConfig
-from ...context import Skeleton
-from ...dataset.KFold import GraphSkeletonCondKFoldOperator, SkeletonCondKFoldConfig, KFoldConfig
-from ...data.read_gait_data import ProcessingGaitConfig
-from ...enums import Separation, Optim
-from ...models.multicond import AggMode, MultiCond
-from ...models.wifacct.gcn import GCNConv
-from ...preprocess.main import PreprocessingConfig
+from ....config import BaseConfig, TrainingConfig
+from ....dataset.KFold import GraphSkeletonCondKFoldOperator, SkeletonCondKFoldConfig, KFoldConfig
+from ....data.read_gait_data import ProcessingGaitConfig
+from ....enums import Optim
+from ....models.multicond import AggMode, MultiCond
+from ....models.wifacct.gcn import GCNConv
+from ....preprocess.main import PreprocessingConfig
 from .try81 import Entrypoint as E
-from ..train import TrainEntrypoint
+from ...train import TrainEntrypoint
 
 # try 86 (81 ->)
 ## Use concatentation mode

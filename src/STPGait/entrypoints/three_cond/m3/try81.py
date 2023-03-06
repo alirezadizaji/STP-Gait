@@ -1,19 +1,20 @@
 from typing import List, Tuple
 
 import numpy as np
-from sklearn.metrics import multilabel_confusion_matrix, f1_score, roc_auc_score, accuracy_score
+from scipy.stats import chi2_contingency
+from sklearn.metrics import multilabel_confusion_matrix, f1_score, roc_auc_score, accuracy_score, recall_score, precision_score
 import torch
 from torch import nn
 
-from ...config import BaseConfig, TrainingConfig
-from ...context import Skeleton
-from ...dataset.KFold import GraphSkeletonCondKFoldOperator, SkeletonCondKFoldConfig, KFoldConfig
-from ...data.read_gait_data import ProcessingGaitConfig
-from ...enums import Separation, Optim
-from ...models.multicond import MultiCond
-from ...models.wifacct.gcn import GCNConv
-from ...preprocess.main import PreprocessingConfig
-from ..train import TrainEntrypoint
+from ....config import BaseConfig, TrainingConfig
+from ....context import Skeleton
+from ....dataset.KFold import GraphSkeletonCondKFoldOperator, SkeletonCondKFoldConfig, KFoldConfig
+from ....data.read_gait_data import ProcessingGaitConfig
+from ....enums import Separation, Optim
+from ....models.multicond import MultiCond
+from ....models.wifacct.gcn import GCNConv
+from ....preprocess.main import PreprocessingConfig
+from ...train import TrainEntrypoint
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = torch.Tensor
@@ -21,7 +22,6 @@ OUT = torch.Tensor
 # try 81
 ## Three-branch condition based training, using three GCN-3l network
 ## Mode: Take average of latent space
-## Semi-supervised training using GCN-3l
 class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
     def __init__(self) -> None:
         kfold = GraphSkeletonCondKFoldOperator(
@@ -141,9 +141,17 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
         f1 = f1_score(self.y_gt, self.y_pred, average='macro') * 100
         auc = roc_auc_score(self.y_gt, y_pred_one_hot, multi_class='ovr') * 100
-        print(f'epoch{self.epoch} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f}', flush=True)
+        rec = recall_score(self.y_gt, self.y_pred, average='macro') * 100
+        pre = precision_score(self.y_gt, self.y_pred, average='macro') * 100
 
-        return np.array([loss, acc, f1, sens, spec, auc])
+        observed = np.zeros((2, num_classes))
+        np.add.at(observed[0], self.y_pred, 1)
+        np.add.at(observed[1], self.y_gt, 1)
+        _, p, *_ = chi2_contingency(observed)
+
+        print(f'epoch{self.epoch} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f} p-value {p:.3f} precision {pre:.2f} recall {rec:.2f}.', flush=True)
+
+        return np.array([loss, acc, f1, sens, spec, auc, rec, pre, p])
 
     def _eval_epoch_end(self, datasep: Separation) -> np.ndarray:
         num_classes = self.kfold._ulabels.size
@@ -162,9 +170,17 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
         f1 = f1_score(self.y_gt, self.y_pred, average='macro') * 100
         auc = roc_auc_score(self.y_gt, y_pred_one_hot, multi_class='ovr') * 100
-        print(f'epoch{self.epoch} separation {datasep} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f}', flush=True)
+        rec = recall_score(self.y_gt, self.y_pred, average='macro') * 100
+        pre = precision_score(self.y_gt, self.y_pred, average='macro') * 100
 
-        return np.array([loss, acc, f1, sens, spec, auc])
+        observed = np.zeros((2, num_classes))
+        np.add.at(observed[0], self.y_pred, 1)
+        np.add.at(observed[1], self.y_gt, 1)
+        _, p, *_ = chi2_contingency(observed)
+
+        print(f'epoch{self.epoch} separation {datasep} loss value {loss:.2f} acc {acc:.2f} spec {spec:.2f} sens {sens:.2f} f1 {f1:.2f} auc {auc:.2f} p-value {p:.3f} precision {pre:.2f} recall {rec:.2f}.', flush=True)
+
+        return np.array([loss, acc, f1, sens, spec, auc, rec, pre, p])
 
     def best_epoch_criteria(self, best_epoch: int) -> bool:
         val = self._criteria_vals[self._VAL_CRITERION_IDX, self.epoch, self.best_epoch_criterion_idx]
@@ -173,7 +189,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
     @property
     def criteria_names(self) -> List[str]:
-        return super().criteria_names + ['ACC', 'F1', 'Sens', 'Spec', 'AUC']
+        return super().criteria_names + ['ACC', 'F1', 'Sens', 'Spec', 'AUC', 'Recall', 'Precision', 'P']
 
     @property
     def best_epoch_criterion_idx(self) -> int:
