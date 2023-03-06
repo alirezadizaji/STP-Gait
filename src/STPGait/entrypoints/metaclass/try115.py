@@ -59,7 +59,8 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
         self.y_gt = self.val_loader.dataset.Y
         self.y_pred = self.model.predict(X_test)
 
-        self.evaluation()
+        criterion = self.evaluation()
+        self.fold_test_criterion[:,self.kfold.testK] = criterion
 
     def evaluation(self):
         num_classes = self.kfold._ulabels.size
@@ -91,7 +92,7 @@ class Entrypoint(TrainEntrypoint[IN, OUT, BaseConfig]):
 
     @property
     def criteria_names(self) -> List[str]:
-        return super().criteria_names + ['ACC', 'F1', 'Sens', 'Spec', 'AUC', 'Recall', 'Precision', 'P']
+        return ['ACC', 'F1', 'Sens', 'Spec', 'AUC', 'Recall', 'Precision', 'P']
 
     def _calc_loss(self, x, data):
         pass
