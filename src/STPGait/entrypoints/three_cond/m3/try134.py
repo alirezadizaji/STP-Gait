@@ -69,5 +69,5 @@ class Entrypoint(E):
                 return x    
                   
         mstgcn = _Module()
-        model = MultiCond[_Module](mstgcn, fc_hidden_num=[60, 60], agg_mode=AggMode.CAT, num_classes=num_classes)
+        model = MultiCond[_Module](mstgcn, fc_hidden_num=[180, 60], agg_mode=AggMode.CAT, num_classes=num_classes)
         return model

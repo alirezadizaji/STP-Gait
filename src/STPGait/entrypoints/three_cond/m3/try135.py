@@ -6,7 +6,7 @@ from ....dataset.KFold import GraphSkeletonCondKFoldOperator, SkeletonCondKFoldC
 from ....data.read_gait_data import ProcessingGaitConfig
 from ....enums import Optim
 from ....models.multicond import AggMode, MultiCond
-from ....models.wifacct.ms_g3d import Model1
+from ....models.wifacct.mst_gcn import Model1
 from ....preprocess.main import PreprocessingConfig
 from .try133 import Entrypoint as E
 from ...train import TrainEntrypoint
@@ -69,5 +69,5 @@ class Entrypoint(E):
                 return x 
             
         mstgcn = _Module()
-        model = MultiCond[_Module](mstgcn, fc_hidden_num=[60, 60], agg_mode=AggMode.ATT, num_classes=num_classes)
+        model = MultiCond[_Module](mstgcn, fc_hidden_num=[60, 60], agg_mode=AggMode.ATT, num_classes=num_classes, z_dim=60)
         return model
