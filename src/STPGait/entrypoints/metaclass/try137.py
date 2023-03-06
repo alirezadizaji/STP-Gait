@@ -11,12 +11,12 @@ from ...data.read_gait_data import ProcessingGaitConfig
 from ...enums import Optim, Phase, Separation
 from ...preprocess.main import PreprocessingConfig
 from ..train import TrainEntrypoint
-from .try115 import Entrypoint as E
+from ..metaclass.try115 import Entrypoint as E
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor]
 
-# try 120
+# try 137
 ## rerun supervised SVM
 ## 5 metaclasses, condition = PS
 class Entrypoint(E):
@@ -31,11 +31,11 @@ class Entrypoint(E):
                 , num_unlabeled=500 , num_per_class=100, metaclass=True))
             )
         config = BaseConfig(
-            try_num=120,
+            try_num=137,
             try_name="wifacct_svm_rerun",
             device="cuda:0",
             eval_batch_size=12,
-            save_log_in_file=True,
+            save_log_in_file=False,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50, batch_size=12)
         )
         TrainEntrypoint.__init__(self, kfold, config)
@@ -55,9 +55,10 @@ class Entrypoint(E):
             self.model.to(self.conf.device)
             self.set_optimizer(self.conf.training_config.optim_type)
         self.set_loaders()
-        self._main_phase_train()
-        
 
+        self._main_phase_train()
+
+        
     def _relabel(self, loader: DataLoader):
         y_pred = []
         X = loader.dataset.X.flatten(1)
@@ -69,9 +70,16 @@ class Entrypoint(E):
     def _main_phase_train(self):
         X_train = self.train_loader.dataset.X.flatten(1)
         Y_train = self.train_loader.dataset.Y
+
         self.model.fit(X_train, Y_train)
 
+        X_test = self.test_loader.dataset.X.flatten(1)
+        Y_test = self.test_loader.dataset.Y
+        y_pred = self.model.predict(X_test)
+        self.y_gt = Y_test
+        self.y_pred = y_pred
         criterion = self.evaluation()
+        
         if self.rerun:
             self.fold_test_criterion_rerun[:,self.kfold.testK] = criterion
         else:
@@ -86,12 +94,9 @@ class Entrypoint(E):
             with self.kfold:
                 self._sub_run()
             
-                # labeling
-                with torch.no_grad():
-                    self.model.eval()
-                    for loader in [self.train_loader, self.val_loader, self.test_loader]:
-                        self._relabel(loader)
-                    self.rerun = True
+                for loader in [self.train_loader, self.val_loader, self.test_loader]:
+                    self._relabel(loader)
+                self.rerun = True
                 
                 self._sub_run()
                 self.rerun = False
@@ -101,4 +106,3 @@ class Entrypoint(E):
 
         cv = {c: np.around(np.mean(v), decimals=4) for c, v in zip(self.criteria_names, self.fold_test_criterion_rerun)}
         print(f"@@@ Final Result on rerun {self.kfold.K} KFold operation on test set: {cv} @@@", flush=True)
-        
