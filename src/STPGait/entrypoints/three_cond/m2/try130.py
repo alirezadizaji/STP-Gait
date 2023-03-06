@@ -58,7 +58,7 @@ class Entrypoint(E):
                 for m in self.gcn3l:
                     x = m(x, edge_index)
                 
-                x = self.gcn_fc(x)
+                x = self.gcn_fc(x, edge_index)
                 return x
 
         gcn3l = _Module()
