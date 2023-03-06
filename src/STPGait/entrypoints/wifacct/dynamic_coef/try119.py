@@ -25,7 +25,7 @@ class Entrypoint(E):
     def __init__(self) -> None:
         kfold = GraphSkeletonKFoldOperator(
             config=SkeletonKFoldConfig(
-                kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0, filterout_unlabeled=True),
+                kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0, filterout_unlabeled=False),
                 load_dir="../../Data/cond12metaclass_PS.pkl",
                 filterout_hardcases=True,
                 savename="Processed_meta_PS_balanced.pkl",
