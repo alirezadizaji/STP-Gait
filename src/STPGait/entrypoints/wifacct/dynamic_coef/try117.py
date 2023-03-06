@@ -8,7 +8,7 @@ from ....data.read_gait_data import ProcessingGaitConfig
 from ....enums import Optim
 from ....preprocess.main import PreprocessingConfig
 from ...train import TrainEntrypoint
-from ..try63 import Entrypoint as E
+from .try79 import Entrypoint as E
 
 IN = Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
 OUT = Tuple[torch.Tensor, torch.Tensor]
