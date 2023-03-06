@@ -4,7 +4,7 @@ from typing_extensions import Protocol
 
 import torch
 from torch import nn, Tensor
-from torchnlp import Attention
+from torchnlp.nn import Attention
 
 T = TypeVar('T', bound=nn.Module)
 
