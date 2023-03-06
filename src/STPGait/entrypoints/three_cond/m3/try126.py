@@ -8,7 +8,7 @@ from ....enums import Optim
 from ....models.multicond import AggMode, MultiCond
 from ....models.wifacct.ms_g3d import Model1
 from ....preprocess.main import PreprocessingConfig
-from .try81 import Entrypoint as E
+from .try124 import Entrypoint as E
 from ...train import TrainEntrypoint
 
 # try 126 (124 ->)
@@ -43,10 +43,20 @@ class Entrypoint(E):
         num_gcn_scales=4
         num_g3d_scales=2
 
-        model = Model1(
-            num_point=num_point,
-            num_person=num_person,
-            num_gcn_scales=num_gcn_scales,
-            num_g3d_scales=num_g3d_scales)
-        model = MultiCond[Model1](model, fc_hidden_num=[60, 60], agg_mode=AggMode.ATT, num_classes=num_classes)
+        class _Module(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.model = Model1(
+                    num_point=num_point,
+                    num_person=num_person,
+                    num_gcn_scales=num_gcn_scales,
+                    num_g3d_scales=num_g3d_scales)
+            
+            def forward(self, x):
+                x = self.model(x)
+                x = x.mean((1, 2))
+                return x
+
+        model = _Module()
+        model = MultiCond[_Module](model, fc_hidden_num=[60, 60], agg_mode=AggMode.ATT, num_classes=num_classes, z_dim=60)
         return model
