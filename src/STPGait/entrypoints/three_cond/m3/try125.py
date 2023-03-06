@@ -36,17 +36,28 @@ class Entrypoint(E):
 
         self._edge_index: torch.Tensor = None
 
+
     def get_model(self) -> nn.Module:
         num_classes = self.kfold._ulabels.size
         num_point = 25
         num_person=1
         num_gcn_scales=4
         num_g3d_scales=2
+        
+        class _Module(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.model = Model1(
+                    num_point=num_point,
+                    num_person=num_person,
+                    num_gcn_scales=num_gcn_scales,
+                    num_g3d_scales=num_g3d_scales)
+            
+            def forward(self, x):
+                x = self.model(x)
+                x = x.mean((1, 2))
+                return x
 
-        model = Model1(
-            num_point=num_point,
-            num_person=num_person,
-            num_gcn_scales=num_gcn_scales,
-            num_g3d_scales=num_g3d_scales)
-        model = MultiCond[Model1](model, fc_hidden_num=[60, 60], agg_mode=AggMode.CAT, num_classes=num_classes)
+        model = _Module()
+        model = MultiCond[_Module](model, fc_hidden_num=[180, 60], agg_mode=AggMode.CAT, num_classes=num_classes)
         return model
