@@ -52,5 +52,5 @@ class Entrypoint(E):
 
         model1 = Model1(in_channels, num_classes, True, None)
         model2 = Model2(model1.A, num_classes, True, None)
-        model = WiFaCCT[Model1, Model2](model1, model2, num_frames=193, num_aux_branches=5)
+        model = WiFaCCT[Model1, Model2](model1, model2, num_frames=191, num_aux_branches=5)
         return model
