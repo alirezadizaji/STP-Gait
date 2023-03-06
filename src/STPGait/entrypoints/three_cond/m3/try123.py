@@ -51,8 +51,9 @@ class Entrypoint(E):
                 for m in self.gcn3l:
                     x = m(x, edge_index)
                 
+                x = x.mean((1, 2))
                 return x
         
         gcn3l = _Module()
-        model = MultiCond[_Module](gcn3l, fc_hidden_num=[60, 60], agg_mode=AggMode.ATT, num_classes=num_classes)
+        model = MultiCond[_Module](gcn3l, fc_hidden_num=[60, 60], agg_mode=AggMode.ATT, num_classes=num_classes, z_dim=60)
         return model

@@ -55,7 +55,7 @@ class MultiCond(nn.Module, Generic[T]):
             x = x.flatten(1)
         else:
             big_q = torch.tile(self.small_q, (B, 1)).unsqueeze(1)
-            x = self.attention(big_q, x).squeeze(1)
+            x = self.attention(big_q, x)[0].squeeze(1)
 
         assert x.ndim == 2 and x.size(1) == self.start_dim, \
                 """ Number of X dimension must be two and the last one must be matched with first layer FC. """
