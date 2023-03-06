@@ -58,6 +58,6 @@ class Entrypoint(E):
                 x = x.mean((1, 2))
                 return x
 
-        model = _Module()
-        model = MultiCond[_Module](model, fc_hidden_num=[180, 60], agg_mode=AggMode.CAT, num_classes=num_classes)
+        m = _Module()
+        model = MultiCond[_Module](m, fc_hidden_num=[180, 60], agg_mode=AggMode.CAT, num_classes=num_classes)
         return model

@@ -63,8 +63,8 @@ class Entrypoint(E):
                 x = x.mean((1, 2))
                 return x
 
-        model = _Module()
-        model = MultiCond[_Module](model, fc_hidden_num=[60, 60], num_classes=num_classes)
+        m = _Module()
+        model = MultiCond[_Module](m, fc_hidden_num=[60, 60], num_classes=num_classes)
         return model
 
     def _model_forwarding(self, data: IN) -> OUT:

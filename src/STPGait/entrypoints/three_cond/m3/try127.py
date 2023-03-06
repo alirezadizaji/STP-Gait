@@ -46,21 +46,39 @@ class Entrypoint(E):
         num_classes = self.kfold._ulabels.size
 
         d = 72
-        model1 = Model1(d_model=d, nhead=8, n_enc_layers=2)
-        model = MultiCond[Model1](model1, fc_hidden_num=[60, 60], num_classes=num_classes)
+        class _Module(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.model1 = Model1(d_model=d, nhead=8, n_enc_layers=2)
+
+            def forward(self, x):
+                x = self.model1(x)
+                x = x.mean((1, 2))
+                return x
+
+        m = _Module()
+        model = MultiCond[Model1](m, fc_hidden_num=[72, 60], num_classes=num_classes)
         return model
 
     @property
     def frame_size(self):
         return 360
 
+    @property
+    def chunk_size(self):
+        return 10
+
     def _model_forwarding(self, data: IN) -> OUT:
-        x = data[0][..., [0, 1]].to(self.conf.device) # N, M, T, V, C        
+        x = data[0][..., :self.frame_size, :, [0, 1]].to(self.conf.device) # N, M, T, V, C        
         cond_mask = data[4].permute(1, 0).to(self.conf.device)
+        
         x = x.permute(1, 0, 2, 3, 4)
+        x = torch.stack(x.split(self.chunk_size, 2), dim=4) # B, T1, V, T2, C
+        x = x.flatten(4).to(self.conf.device)  # B, T1, V, D
+        
         inps = list()
         for x_ in x:
-            inps.append((x_[:, :self.frame_size]))
+            inps.append((x_[:, :self.frame_size],))
 
         out: OUT = self.model(cond_mask, inps)
         return out

@@ -6,7 +6,7 @@ from ....dataset.KFold import GraphSkeletonCondKFoldOperator, SkeletonCondKFoldC
 from ....data.read_gait_data import ProcessingGaitConfig
 from ....enums import Optim
 from ....models.multicond import AggMode, MultiCond
-from ....models.wifacct.ms_g3d import Model1
+from ....models.wifacct.vivit import Model1
 from ....preprocess.main import PreprocessingConfig
 from .try127 import Entrypoint as E
 from ...train import TrainEntrypoint
@@ -40,6 +40,16 @@ class Entrypoint(E):
         num_classes = self.kfold._ulabels.size
 
         d = 72
-        model1 = Model1(d_model=d, nhead=8, n_enc_layers=2)
-        model = MultiCond[Model1](model1, fc_hidden_num=[60, 60], agg_mode=AggMode.ATT, num_classes=num_classes)
+        class _Module(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.model1 = Model1(d_model=d, nhead=8, n_enc_layers=2)
+
+            def forward(self, x):
+                x = self.model1(x)
+                x = x.mean((1, 2))
+                return x
+
+        m = _Module()
+        model = MultiCond[_Module](m, fc_hidden_num=[72, 60], agg_mode=AggMode.ATT, num_classes=num_classes, z_dim=72)
         return model
