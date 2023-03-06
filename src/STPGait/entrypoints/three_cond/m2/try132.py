@@ -41,7 +41,7 @@ class Entrypoint(E):
         self._edge_index: torch.Tensor = None
 
     def get_model(self):
-        encoder = Encoder1(72, 6, 3)
+        encoder = Encoder1(216, 6, 3)
         num_classes = self.kfold._ulabels.size
         model = ViViT(num_classes, encoder)
         return model
