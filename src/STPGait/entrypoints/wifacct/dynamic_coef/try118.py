@@ -100,6 +100,7 @@ class Entrypoint(E):
                 weight_save_path =  os.path.join(weight_save_dir, str(epoch))
                 self.model.load_state_dict(torch.load(weight_save_path, map_location=self.conf.device))
 
+                self.set_loaders()
                 # labeling
                 with torch.no_grad():
                     self.model.eval()
