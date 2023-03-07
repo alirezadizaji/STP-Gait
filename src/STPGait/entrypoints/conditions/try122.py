@@ -43,7 +43,7 @@ class Entrypoint(E):
             try_name="cond3class_MSG3D" + self.cond,
             device="cuda:0",
             eval_batch_size=32,
-            save_log_in_file=False,
+            save_log_in_file=True,
             training_config=TrainingConfig(num_epochs=200, optim_type=Optim.ADAM, lr=3e-3, early_stop=50)
         )
         TrainEntrypoint.__init__(self, kfold, config)
@@ -68,6 +68,12 @@ class Entrypoint(E):
             num_gcn_scales=num_gcn_scales,
             num_g3d_scales=num_g3d_scales)
         
-        model = WiFaCCT[Model1, Model2](model1, model2, num_frames=159, num_aux_branches=3)
+        if self.cond == 'DTM':
+            num_frames = 159
+        elif self.cond == 'EC':
+            num_frames = 232
+        elif self.cond == 'PS':
+            num_frames = 183
+        model = WiFaCCT[Model1, Model2](model1, model2, num_frames=num_frames, num_aux_branches=3)
         return model
 
