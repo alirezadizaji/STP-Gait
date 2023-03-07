@@ -20,7 +20,7 @@ OUT = Tuple[torch.Tensor, torch.Tensor]
 ## 3 classes = healthy, hypokinetic, ataxic
 class Entrypoint(E):
     def __init__(self) -> None:
-        self.cond = "DTC"
+        self.cond = "DTM"
         kfold = GraphSkeletonKFoldOperator(
             config=SkeletonKFoldConfig(
                 kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0, filterout_unlabeled=True,
