@@ -4,7 +4,7 @@ from torch import nn
 from ....config import BaseConfig, TrainingConfig
 from ....dataset.KFold import GraphSkeletonCondKFoldOperator, SkeletonCondKFoldConfig, KFoldConfig
 from ....data.read_gait_data import ProcessingGaitConfig
-from ....enums import Optim
+from ....enums import Label, Optim
 from ....models.multicond import AggMode, MultiCond
 from ....models.wifacct.vivit import Model1
 from ....preprocess.main import PreprocessingConfig
@@ -17,7 +17,10 @@ class Entrypoint(E):
     def __init__(self) -> None:
         kfold = GraphSkeletonCondKFoldOperator(
             config=SkeletonCondKFoldConfig(
-                kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0, filterout_unlabeled=True),
+                kfold_config=KFoldConfig(K=5, init_valK=0, init_testK=0, filterout_unlabeled=True,
+                remove_labels= [Label.ANXIOUS, Label.SENSORY_ATAXIC, Label.PARETIC,
+                Label.HYPOKENITC_FRONTAL, Label.ANTALGIC, Label.DYSKINETIC, 
+                Label.FUNCTIONAL, Label.MOTOR_COGNITIVE, Label.SPASTIC]),
                 load_dir="../../Data/cond12class.pkl",
                 filterout_hardcases=True,
                 savename="processed12cls_120c.pkl",
